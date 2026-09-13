@@ -1,0 +1,348 @@
+/* ==========================================================================
+   Pecera Social - Master Crystal Glass Fishbowl & Aquatic Physics
+   Pixel-perfect crystal vessel, animated 3D water optics & submerged tickets
+   ========================================================================== */
+
+.fishbowl-stage {
+  position: relative;
+  width: min(90vw, 440px);
+  aspect-ratio: 1 / 1.05;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 1.25rem auto 2.5rem;
+}
+
+/* Floor contact shadow beneath glass base */
+.fishbowl-shadow {
+  position: absolute;
+  bottom: 6px;
+  width: 72%;
+  height: 24px;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.85) 0%, rgba(1, 10, 26, 0.55) 45%, transparent 75%);
+  border-radius: 50%;
+  filter: blur(8px);
+  pointer-events: none;
+  z-index: 1;
+  transition: transform var(--transition-smooth);
+}
+
+/* Luminous aquatic caustic refraction puddle on surface table */
+.fishbowl-caustic-pool {
+  position: absolute;
+  bottom: 10px;
+  width: 66%;
+  height: 26px;
+  background: radial-gradient(ellipse at center, rgba(0, 229, 255, 0.42) 0%, rgba(0, 130, 255, 0.2) 45%, transparent 75%);
+  border-radius: 50%;
+  filter: blur(12px);
+  pointer-events: none;
+  z-index: 1;
+  animation: causticPoolPulse 4.5s ease-in-out infinite alternate;
+}
+
+@keyframes causticPoolPulse {
+  0% { transform: scale(0.96); opacity: 0.7; }
+  100% { transform: scale(1.05); opacity: 1; }
+}
+
+/* Main Interactive Fishbowl Container */
+.fishbowl {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  user-select: none;
+  touch-action: manipulation;
+  z-index: 2;
+  transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), filter 0.35s ease;
+}
+
+.fishbowl:hover {
+  transform: translateY(-5px) scale(1.015);
+  filter: drop-shadow(0 14px 34px rgba(0, 229, 255, 0.28));
+}
+
+.fishbowl:hover .fishbowl-cta-hint {
+  transform: translateX(-50%) translateY(2px);
+  box-shadow: 0 6px 22px rgba(0, 229, 255, 0.55);
+  border-color: #00e5ff;
+  opacity: 1;
+}
+
+/* SVG Vector Vessel */
+.fishbowl-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+}
+
+/* Water meniscus breathing ripple */
+.animated-water-meniscus {
+  animation: meniscusBreathe 4.5s ease-in-out infinite alternate;
+  transform-origin: 230px 152px;
+}
+
+@keyframes meniscusBreathe {
+  0% { transform: scaleX(1) scaleY(1); }
+  50% { transform: scaleX(1.012) scaleY(1.04) translateY(1.5px); }
+  100% { transform: scaleX(0.99) scaleY(0.98) translateY(-1px); }
+}
+
+/* Internal Fishbowl Rising Micro-Bubbles */
+.bowl-bubbles-container {
+  position: absolute;
+  top: 33%;
+  left: 9%;
+  width: 82%;
+  height: 58%;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.bowl-bubble {
+  position: absolute;
+  bottom: -4px;
+  background: radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.9) 0%, rgba(0, 229, 255, 0.4) 60%, transparent 100%);
+  border: 0.5px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 0 6px rgba(0, 229, 255, 0.45);
+  border-radius: 50%;
+  animation: bowlBubbleRise 3.6s ease-in infinite;
+}
+
+@keyframes bowlBubbleRise {
+  0% {
+    transform: translateY(0) translateX(0) scale(0.5);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.9;
+  }
+  85% {
+    opacity: 0.9;
+    transform: translateY(-210px) translateX(var(--drift, 12px)) scale(1.1);
+  }
+  100% {
+    transform: translateY(-235px) translateX(var(--drift, 12px)) scale(1.2);
+    opacity: 0;
+  }
+}
+
+/* Submerged Tickets Floating Layer */
+.tickets-water-layer {
+  position: absolute;
+  top: 33%;
+  left: 9%;
+  width: 82%;
+  height: 58%;
+  pointer-events: none;
+  z-index: 6;
+}
+
+/* Individual submerged raffle ticket */
+.water-ticket {
+  position: absolute;
+  width: 62px;
+  height: 38px;
+  border-radius: 6px;
+  border: 1.5px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 
+    0 8px 18px rgba(0, 0, 0, 0.45),
+    0 0 14px rgba(0, 229, 255, 0.3),
+    inset 0 1px 3px rgba(255, 255, 255, 0.7);
+  transform-origin: center center;
+  transition: transform 0.4s ease, opacity 0.4s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  font-family: var(--font-display);
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  animation: ticketFloating 4.5s ease-in-out infinite alternate;
+}
+
+/* Ticket perforated stub notch effect */
+.water-ticket::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 12px;
+  background: rgba(0, 0, 0, 0.22);
+  border-right: 1.5px dashed rgba(255, 255, 255, 0.7);
+}
+
+/* Ticket glossy crystal sheen */
+.water-ticket::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.45) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.ticket-number-label {
+  position: relative;
+  z-index: 2;
+  margin-left: 8px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.ticket-star {
+  font-size: 9px;
+  color: #ffd166;
+  filter: drop-shadow(0 0 4px rgba(255, 209, 102, 0.8));
+}
+
+@keyframes ticketFloating {
+  0% {
+    transform: translate(var(--tx, 0), var(--ty, 0)) rotate(var(--rot, 0deg)) scale(var(--scale, 1));
+  }
+  50% {
+    transform: translate(calc(var(--tx, 0) + 4px), calc(var(--ty, 0) - 7px)) rotate(calc(var(--rot, 0deg) + 4deg)) scale(calc(var(--scale, 1) * 1.02));
+  }
+  100% {
+    transform: translate(calc(var(--tx, 0) - 4px), calc(var(--ty, 0) + 4px)) rotate(calc(var(--rot, 0deg) - 4deg)) scale(var(--scale, 1));
+  }
+}
+
+/* Empty state inside fishbowl */
+.fishbowl-empty-state {
+  position: absolute;
+  top: 48%;
+  left: 8%;
+  right: 8%;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.9);
+  pointer-events: none;
+  transition: opacity var(--transition-smooth);
+  z-index: 6;
+}
+
+.fishbowl-empty-icon {
+  font-size: 2.6rem;
+  margin-bottom: 0.35rem;
+  filter: drop-shadow(0 2px 14px rgba(0, 229, 255, 0.7));
+  animation: swimGently 4.5s ease-in-out infinite alternate;
+  display: inline-block;
+}
+
+@keyframes swimGently {
+  0% { transform: translateX(-10px) scaleX(1); }
+  50% { transform: translateX(10px) translateY(-5px) scaleX(1); }
+  51% { transform: translateX(10px) translateY(-5px) scaleX(-1); }
+  100% { transform: translateX(-10px) scaleX(-1); }
+}
+
+.fishbowl-empty-text {
+  font-size: 0.94rem;
+  font-weight: 700;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.fishbowl-empty-text small {
+  font-size: 0.78rem;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+/* Floating Interactive CTA Hint (Cleanly positioned under the bowl stage) */
+.fishbowl-cta-hint {
+  position: absolute;
+  bottom: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(3, 19, 42, 0.94);
+  border: 1px solid rgba(0, 229, 255, 0.65);
+  color: #fff;
+  padding: 0.45rem 1.25rem;
+  border-radius: var(--radius-full);
+  font-size: 0.84rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0.95;
+  transition: all var(--transition-smooth);
+  box-shadow: 0 4px 18px rgba(0, 229, 255, 0.35);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* ==========================================================================
+   Animations: Shaking & Ticket Extraction
+   ========================================================================== */
+
+.fishbowl.is-shaking {
+  animation: fishbowlShake 0.12s ease-in-out infinite alternate;
+}
+
+.fishbowl.is-shaking .animated-water-meniscus {
+  animation: violentWaves 0.1s linear infinite alternate;
+}
+
+@keyframes fishbowlShake {
+  0% { transform: translate(-6px, 2px) rotate(-2.5deg); }
+  50% { transform: translate(6px, -2px) rotate(2.5deg); }
+  100% { transform: translate(-4px, -1px) rotate(-1.5deg); }
+}
+
+@keyframes violentWaves {
+  0% { transform: scaleX(1.08) translateY(-4px) rotate(3deg); }
+  100% { transform: scaleX(0.92) translateY(5px) rotate(-3deg); }
+}
+
+/* Ticket launched animation */
+.launched-ticket-stage {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.launched-ticket {
+  position: absolute;
+  width: 96px;
+  height: 60px;
+  border-radius: 8px;
+  border: 2.5px solid #fff;
+  box-shadow: 0 0 40px var(--gold-glow), 0 12px 30px rgba(0, 0, 0, 0.6);
+  animation: launchAndAscend 1.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes launchAndAscend {
+  0% {
+    transform: translateY(90px) scale(0.4) rotate(0deg);
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-80px) scale(1.1) rotate(180deg);
+  }
+  70% {
+    transform: translateY(-140px) scale(1.4) rotate(360deg);
+  }
+  100% {
+    transform: translateY(-70px) scale(1.85) rotate(720deg);
+    opacity: 0;
+  }
+}

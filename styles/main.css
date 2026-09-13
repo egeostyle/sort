@@ -1,0 +1,454 @@
+/* ==========================================================================
+   Pecera Social - Main & Theme Styles
+   Modern, fluid, accessible, high-performance styling
+   ========================================================================== */
+
+:root {
+  /* Color Palette - Deep Ocean & Bioluminescent Glow */
+  --bg-deep: #050e1e;
+  --bg-water: #0b1e38;
+  --bg-surface: rgba(16, 37, 66, 0.65);
+  --bg-surface-hover: rgba(22, 50, 88, 0.8);
+  --glass-border: rgba(255, 255, 255, 0.14);
+  --glass-highlight: rgba(255, 255, 255, 0.28);
+  --glass-shadow: 0 16px 40px -8px rgba(0, 0, 0, 0.45);
+
+  --text-main: #f0f7ff;
+  --text-muted: #94adc8;
+  --text-dim: #5c7b9e;
+
+  --accent-cyan: #00e5ff;
+  --accent-blue: #2979ff;
+  --accent-glow: rgba(0, 229, 255, 0.35);
+  --gold: #ffd166;
+  --gold-glow: rgba(255, 209, 102, 0.4);
+
+  /* Typography */
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  --font-display: 'Outfit', var(--font-sans);
+
+  /* Elevation & Radius */
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-full: 9999px;
+
+  /* Transitions */
+  --transition-fast: 150ms cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-smooth: 320ms cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-bounce: 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  min-height: 100%;
+  overflow-x: hidden;
+  font-family: var(--font-sans);
+  color: var(--text-main);
+  background-color: var(--bg-deep);
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  min-height: 100vh;
+}
+
+/* ==========================================================================
+   Atmospheric Oceanic Background & Caustics
+   ========================================================================== */
+.ocean-ambient {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 15%, #10335e 0%, #081a33 50%, #030a16 100%);
+}
+
+/* Shimmering light caustics on top water level */
+.ocean-caustics {
+  position: absolute;
+  inset: -50% 0 auto 0;
+  height: 80vh;
+  background: 
+    radial-gradient(ellipse at 30% 30%, rgba(0, 229, 255, 0.12) 0%, transparent 60%),
+    radial-gradient(ellipse at 70% 25%, rgba(41, 121, 255, 0.15) 0%, transparent 65%),
+    radial-gradient(ellipse at 50% 10%, rgba(255, 255, 255, 0.08) 0%, transparent 50%);
+  filter: blur(40px);
+  animation: causticsWave 18s ease-in-out infinite alternate;
+}
+
+@keyframes causticsWave {
+  0% { transform: scale(1) translateY(0); }
+  50% { transform: scale(1.1) translateY(20px) rotate(1deg); }
+  100% { transform: scale(1) translateY(-10px); }
+}
+
+/* Floating ambient bubbles in the background */
+.ocean-bubble {
+  position: absolute;
+  bottom: -30px;
+  background: radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.85) 0%, rgba(0, 229, 255, 0.38) 45%, rgba(0, 150, 255, 0.08) 80%, transparent 100%);
+  border: 0.5px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 0 8px rgba(0, 229, 255, 0.3);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: floatUpward linear infinite;
+}
+
+@keyframes floatUpward {
+  0% {
+    transform: translateY(0) translateX(0);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.7;
+  }
+  85% {
+    opacity: 0.7;
+  }
+  100% {
+    transform: translateY(-110vh) translateX(var(--bubble-drift, 25px));
+    opacity: 0;
+  }
+}
+
+/* Subtle seabed elements */
+.ocean-bottom-glow {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 180px;
+  background: linear-gradient(to top, rgba(0, 10, 25, 0.95), transparent);
+}
+
+/* ==========================================================================
+   Layout Containers
+   ========================================================================== */
+.app-container {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 100vh;
+  padding: 1.25rem 1.5rem;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* Header & Top Bar */
+.app-header {
+  width: 100%;
+  max-width: 820px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.35rem;
+  letter-spacing: -0.02em;
+  color: #fff;
+  text-shadow: 0 2px 10px rgba(0, 229, 255, 0.3);
+}
+
+.brand-icon {
+  font-size: 1.5rem;
+  animation: gentleBob 3s ease-in-out infinite;
+}
+
+@keyframes gentleBob {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-4px) rotate(4deg); }
+}
+
+.brand-badge {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  background: rgba(0, 229, 255, 0.15);
+  border: 1px solid rgba(0, 229, 255, 0.3);
+  color: var(--accent-cyan);
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-full);
+}
+
+/* Main Interactive Stage (Middle section with Fishbowl) */
+.stage-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: 100%;
+  flex: 1;
+  padding: 1rem 0;
+}
+
+/* Footer / Bottom Bar */
+.app-footer {
+  width: 100%;
+  max-width: 960px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 0.85rem 1.5rem;
+  background: var(--bg-surface);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-full);
+  box-shadow: var(--glass-shadow);
+  margin-bottom: 0.5rem;
+}
+
+.footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* ==========================================================================
+   Modern Utilities & Buttons
+   ========================================================================== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.65rem 1.25rem;
+  border-radius: var(--radius-full);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all var(--transition-smooth);
+  user-select: none;
+  white-space: nowrap;
+  text-decoration: none;
+  outline: none;
+}
+
+.btn:focus-visible {
+  box-shadow: 0 0 0 3px var(--accent-glow), 0 0 0 1px #fff;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent-cyan) 0%, var(--accent-blue) 100%);
+  color: #031326;
+  font-weight: 700;
+  box-shadow: 0 4px 18px rgba(0, 229, 255, 0.35);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(0, 229, 255, 0.5);
+  color: #000;
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-glass {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--glass-border);
+  color: var(--text-main);
+  backdrop-filter: blur(10px);
+}
+
+.btn-glass:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.28);
+  transform: translateY(-1px);
+}
+
+.btn-icon-only {
+  padding: 0.65rem;
+  border-radius: 50%;
+  aspect-ratio: 1;
+}
+
+.btn-gold {
+  background: linear-gradient(135deg, #ffd166 0%, #f77f00 100%);
+  color: #1a0f00;
+  font-weight: 700;
+  box-shadow: 0 4px 20px var(--gold-glow);
+}
+
+.btn-gold:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 8px 30px rgba(255, 209, 102, 0.6);
+}
+
+.btn-whatsapp {
+  background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+  color: #fff;
+  font-weight: 700;
+  box-shadow: 0 4px 18px rgba(37, 211, 102, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.btn-whatsapp:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(37, 211, 102, 0.55);
+  color: #fff;
+}
+
+.btn-whatsapp:active {
+  transform: translateY(0);
+}
+
+/* Audio toggle */
+.audio-toggle-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.audio-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(0, 229, 255, 0.5);
+  box-shadow: 0 0 12px rgba(0, 229, 255, 0.3);
+  color: #fff;
+}
+
+.audio-toggle-btn.muted {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: var(--text-muted);
+}
+
+.audio-toggle-btn.muted svg {
+  opacity: 0.45;
+}
+
+/* Counter */
+.counter-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.counter-pill:hover .counter-label {
+  color: var(--text-main);
+}
+
+.counter-badge {
+  background: rgba(0, 229, 255, 0.15);
+  color: var(--accent-cyan);
+  border: 1px solid rgba(0, 229, 255, 0.25);
+  font-weight: 700;
+  padding: 0.2rem 0.65rem;
+  border-radius: var(--radius-full);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  transition: transform var(--transition-bounce);
+}
+
+.counter-badge.bump {
+  animation: bump 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes bump {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.35); color: #fff; background: var(--accent-blue); }
+  100% { transform: scale(1); }
+}
+
+/* Quick toast notifications */
+.toast-container {
+  position: fixed;
+  top: 1.5rem;
+  right: 1.5rem;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  pointer-events: none;
+}
+
+.toast {
+  pointer-events: auto;
+  background: rgba(11, 30, 56, 0.95);
+  border: 1px solid var(--glass-highlight);
+  color: #fff;
+  padding: 0.75rem 1.25rem;
+  border-radius: var(--radius-md);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  animation: toastIn 300ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(-10px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes toastOut {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(-10px) scale(0.95); }
+}
+
+.spin {
+  animation: spinLoader 0.9s linear infinite;
+}
+
+@keyframes spinLoader {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 640px) {
+  .app-container {
+    padding: 1rem 0.75rem;
+  }
+  .app-footer {
+    border-radius: var(--radius-lg);
+    justify-content: center;
+    text-align: center;
+  }
+  .footer-actions {
+    width: 100%;
+    justify-content: center;
+  }
+}

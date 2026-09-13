@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Pecera Social - Sorteo Interactivo de Publicaciones</title>
+  <meta name="description" content="Webapp lúdica de sorteo interactivo con pecera virtual para enlaces de Instagram, TikTok y Facebook con persistencia y diseño fluido." />
+  <meta name="theme-color" content="#050e1e" />
+
+  <!-- PWA Manifest & Icons (George & Yenka) -->
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png" />
+
+  <!-- Google Fonts: Plus Jakarta Sans & Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="styles/main.css" />
+  <link rel="stylesheet" href="styles/fishbowl.css" />
+  <link rel="stylesheet" href="styles/components.css" />
+</head>
+<body>
+
+  <!-- Ambient Aquatic Background -->
+  <div id="ocean-ambient" class="ocean-ambient">
+    <div class="ocean-caustics"></div>
+    <div class="ocean-bottom-glow"></div>
+  </div>
+
+  <!-- Confetti Canvas -->
+  <canvas id="confetti-canvas"></canvas>
+
+  <!-- App Layout Container -->
+  <div class="app-container">
+
+    <!-- 1. Top Section: Brand & Input -->
+    <header class="app-header">
+      <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 0 0.5rem;">
+        <div class="brand">
+          <img src="assets/icon-192.png" alt="George & Yenka" class="brand-avatar-img" />
+          <div>
+            <div style="display: flex; align-items: center; gap: 0.35rem;">
+              <span>Pecera Social</span>
+              <span class="brand-badge">George & Yenka</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="header-actions-group">
+          <!-- Cloud Status Pill -->
+          <button id="btn-cloud-status" class="cloud-status-pill" type="button" title="Estado de sincronización en la nube con Firebase">
+            <span id="cloud-status-dot" class="cloud-dot"></span>
+            <span id="cloud-status-text">Local</span>
+          </button>
+
+          <!-- Mobile Shortcuts Connect Button -->
+          <button id="btn-mobile-connect" class="btn-mobile-connect" type="button" title="Configurar atajos de 1 toque para Yenka (iPhone) y George (Android)">
+            📱 Celulares
+          </button>
+
+          <!-- Audio Toggle -->
+          <button id="btn-audio-toggle" class="audio-toggle-btn" title="Silenciar / Activar sonido" aria-label="Control de sonido">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Centered Modern Input Box -->
+      <div class="url-input-card">
+        <div class="url-input-wrapper">
+          <div class="input-platform-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+            </svg>
+          </div>
+          <input 
+            type="url" 
+            id="url-input" 
+            class="url-input" 
+            placeholder="Pega un enlace de Instagram, TikTok, Facebook o YouTube..." 
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <div class="input-actions">
+            <button id="btn-paste" class="btn-paste" type="button" title="Pegar del portapapeles">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
+                <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+              </svg>
+              Pegar
+            </button>
+          </div>
+        </div>
+
+        <!-- Sender Selector Row -->
+        <div class="sender-selector-row">
+          <span class="sender-selector-label">Sumergido por:</span>
+          <div id="sender-pills-group" class="sender-pills-group">
+            <button type="button" class="sender-pill sender-george active" data-sender="George">
+              🔵 George
+            </button>
+            <button type="button" class="sender-pill sender-yenka" data-sender="Yenka">
+              💖 Yenka
+            </button>
+          </div>
+        </div>
+
+        <!-- Dynamic Media Preview Container -->
+        <div id="preview-container" class="preview-card-container"></div>
+      </div>
+    </header>
+
+    <!-- 2. Middle Section: The Interactive Fishbowl -->
+    <main class="stage-container">
+      <div class="fishbowl-stage">
+        <!-- Floor / Table Contact Shadow & Caustic Pool -->
+        <div class="fishbowl-shadow"></div>
+        <div class="fishbowl-caustic-pool"></div>
+
+        <!-- Interactive Fishbowl -->
+        <div id="fishbowl" class="fishbowl" role="button" tabindex="0" aria-label="Pecera de sorteo. Haz clic para sortear boletos.">
+          
+          <!-- High-Fidelity Crystal Glass Vector Vessel -->
+          <svg class="fishbowl-svg" viewBox="0 0 460 460" aria-hidden="true">
+            <defs>
+              <linearGradient id="glassWallGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#ffffff" stop-opacity="0.38"/>
+                <stop offset="4%" stop-color="#00e5ff" stop-opacity="0.22"/>
+                <stop offset="16%" stop-color="#00a0ff" stop-opacity="0.04"/>
+                <stop offset="84%" stop-color="#00a0ff" stop-opacity="0.04"/>
+                <stop offset="96%" stop-color="#00e5ff" stop-opacity="0.22"/>
+                <stop offset="100%" stop-color="#ffffff" stop-opacity="0.38"/>
+              </linearGradient>
+
+              <linearGradient id="waterDepthGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#00e5ff" stop-opacity="0.48"/>
+                <stop offset="22%" stop-color="#0094ff" stop-opacity="0.68"/>
+                <stop offset="68%" stop-color="#023a92" stop-opacity="0.9"/>
+                <stop offset="100%" stop-color="#011648" stop-opacity="0.98"/>
+              </linearGradient>
+
+              <radialGradient id="waterSurfaceGrad" cx="50%" cy="40%" r="50%">
+                <stop offset="0%" stop-color="#ffffff" stop-opacity="0.55"/>
+                <stop offset="45%" stop-color="#00e5ff" stop-opacity="0.42"/>
+                <stop offset="85%" stop-color="#0088ff" stop-opacity="0.28"/>
+                <stop offset="100%" stop-color="#00e5ff" stop-opacity="0.75"/>
+              </radialGradient>
+
+              <radialGradient id="rimMouthGrad" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="#021226" stop-opacity="0.45"/>
+                <stop offset="65%" stop-color="#00e5ff" stop-opacity="0.2"/>
+                <stop offset="95%" stop-color="#ffffff" stop-opacity="0.75"/>
+                <stop offset="100%" stop-color="#ffffff" stop-opacity="0.95"/>
+              </radialGradient>
+
+              <clipPath id="bowlWaterClip">
+                <path d="M 125,35 
+                         C 98,65 26,135 26,230 
+                         C 26,348 100,418 150,422 
+                         L 310,422 
+                         C 360,418 434,348 434,230 
+                         C 434,135 362,65 335,35 
+                         Z"/>
+              </clipPath>
+            </defs>
+
+            <!-- Base pedestal foot -->
+            <ellipse cx="230" cy="422" rx="84" ry="11" fill="#021c3e" stroke="rgba(255,255,255,0.45)" stroke-width="1.5"/>
+            <ellipse cx="230" cy="422" rx="80" ry="7" fill="none" stroke="rgba(0,229,255,0.35)" stroke-width="1"/>
+
+            <!-- Submerged Water Body (Clipped inside bowl) -->
+            <g clip-path="url(#bowlWaterClip)">
+              <path d="M 20,152 L 440,152 L 440,430 L 20,430 Z" fill="url(#waterDepthGrad)"/>
+              
+              <!-- Caustics shimmer inside water -->
+              <ellipse cx="230" cy="375" rx="130" ry="34" fill="#00e5ff" fill-opacity="0.2" filter="blur(16px)"/>
+              <ellipse cx="165" cy="280" rx="80" ry="45" fill="#ffffff" fill-opacity="0.12" filter="blur(14px)"/>
+              <ellipse cx="300" cy="315" rx="85" ry="35" fill="#00e5ff" fill-opacity="0.18" filter="blur(18px)"/>
+            </g>
+
+            <!-- Water Surface Meniscus -->
+            <g class="animated-water-meniscus">
+              <ellipse cx="230" cy="152" rx="180" ry="20" fill="url(#waterSurfaceGrad)" stroke="rgba(255,255,255,0.85)" stroke-width="1.5"/>
+              <ellipse cx="230" cy="152" rx="177" ry="16" fill="none" stroke="rgba(0,229,255,0.65)" stroke-width="1"/>
+            </g>
+
+            <!-- Crystal Glass Vessel Body -->
+            <path d="M 125,35 
+                     C 98,65 26,135 26,230 
+                     C 26,348 100,418 150,422 
+                     L 310,422 
+                     C 360,418 434,348 434,230 
+                     C 434,135 362,65 335,35 
+                     Z" 
+                  fill="url(#glassWallGrad)" 
+                  stroke="rgba(255,255,255,0.38)" 
+                  stroke-width="2"/>
+
+            <!-- Studio Light Crescent Specular Highlight (Upper Left) -->
+            <path d="M 134,56 
+                     C 85,100 52,165 52,230 
+                     C 52,280 65,315 82,345" 
+                  fill="none" 
+                  stroke="#ffffff" 
+                  stroke-width="3.5" 
+                  stroke-linecap="round" 
+                  stroke-opacity="0.8" 
+                  filter="blur(1px)"/>
+
+            <path d="M 144,68 
+                     C 102,112 74,168 74,230" 
+                  fill="none" 
+                  stroke="#ffffff" 
+                  stroke-width="1.5" 
+                  stroke-linecap="round" 
+                  stroke-opacity="0.45"/>
+
+            <!-- Soft Bounce Specular Glare (Lower Right) -->
+            <path d="M 408,240 
+                     C 412,290 385,350 345,385" 
+                  fill="none" 
+                  stroke="#00e5ff" 
+                  stroke-width="2.5" 
+                  stroke-linecap="round" 
+                  stroke-opacity="0.45" 
+                  filter="blur(1.5px)"/>
+
+            <!-- Top Rim Mouth Opening (Integrated with glass neck) -->
+            <ellipse cx="230" cy="35" rx="105" ry="14" fill="url(#rimMouthGrad)" stroke="rgba(255,255,255,0.8)" stroke-width="2"/>
+            <ellipse cx="230" cy="35" rx="101" ry="10" fill="none" stroke="rgba(0,229,255,0.45)" stroke-width="1"/>
+            <path d="M 155,31 C 190,27 270,27 305,31" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-opacity="0.95"/>
+          </svg>
+
+          <!-- Internal Rising Bubbles Container -->
+          <div id="bowl-bubbles-container" class="bowl-bubbles-container"></div>
+
+          <!-- Submerged Tickets Layer -->
+          <div id="tickets-water-layer" class="tickets-water-layer"></div>
+
+          <!-- Empty State -->
+          <div id="fishbowl-empty-state" class="fishbowl-empty-state">
+            <div class="fishbowl-empty-icon">🐠</div>
+            <div class="fishbowl-empty-text">Pecera vacía<br><small style="opacity:0.8;">Pega un enlace arriba para sumergir boletos</small></div>
+          </div>
+
+          <!-- Interactive Hover Prompt -->
+          <div class="fishbowl-cta-hint">
+            <span>Toca la pecera para sortear ✨</span>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- 3. Bottom Section: Controls & Counter -->
+    <footer class="app-footer">
+      <div class="footer-actions">
+        <button id="btn-categories" class="btn btn-glass" type="button">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 9h16M4 15h16M10 3L8 21M16 3l-2 18"/>
+          </svg>
+          Categorías
+        </button>
+        <button id="btn-add-category-quick" class="btn btn-glass" type="button" title="Crear nueva categoría">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          Nueva
+        </button>
+      </div>
+
+      <!-- Ticket Counter with Click to View List -->
+      <div id="counter-pill" class="counter-pill" title="Haz clic para ver todos los boletos guardados">
+        <span id="counter-badge" class="counter-badge">
+          <span id="ticket-counter-val">0</span>
+        </span>
+        <span class="counter-label">tickets en la pecera ↗</span>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- ==========================================================================
+       Modals & Dialogs
+       ========================================================================== -->
+
+  <!-- Modal A: Raffle Category Selector -->
+  <dialog id="raffle-dialog">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">
+          <span>🎲</span> ¿Qué categoría deseas sortear?
+        </h3>
+        <button id="btn-close-raffle-modal" class="btn-close-modal" aria-label="Cerrar modal">✕</button>
+      </div>
+      <p style="font-size: 0.85rem; color: var(--text-muted);">
+        Elige un grupo o sortea entre todos los boletos sumergidos en la pecera.
+      </p>
+
+      <!-- Raffle Sender Filter -->
+      <div style="margin: 0.6rem 0 0.8rem; padding: 0.5rem; background: rgba(255,255,255,0.04); border-radius: var(--radius-sm);">
+        <div style="font-size: 0.73rem; color: var(--text-dim); margin-bottom: 0.35rem; text-align: center;">Filtrar por remitente:</div>
+        <div id="raffle-sender-filter-group" class="sender-pills-group" style="justify-content: center;">
+          <button type="button" class="sender-pill active" data-raffle-sender="all">🌟 Ambos (Todos)</button>
+          <button type="button" class="sender-pill sender-george" data-raffle-sender="George">🔵 Solo George</button>
+          <button type="button" class="sender-pill sender-yenka" data-raffle-sender="Yenka">💖 Solo Yenka</button>
+        </div>
+      </div>
+
+      <div id="raffle-categories-grid" class="raffle-choice-grid">
+        <!-- Injected by JS -->
+      </div>
+
+      <button id="btn-confirm-raffle" class="btn btn-gold" style="width: 100%; margin-top: 0.5rem;">
+        ⚡ ¡Girar Pecera y Sortear!
+      </button>
+    </div>
+  </dialog>
+
+  <!-- Modal B: Winner Reveal Card -->
+  <dialog id="winner-dialog">
+    <div class="modal-card">
+      <div class="modal-header" style="border:none; padding-bottom: 0;">
+        <button id="btn-close-winner-modal" class="btn-close-modal" style="margin-left:auto;" aria-label="Cerrar modal">✕</button>
+      </div>
+
+      <div class="winner-card-container">
+        <div class="winner-headline">
+          <span>🎉</span> ¡Tenemos Ganador! <span>🎉</span>
+        </div>
+
+        <div id="winner-card-body" style="width:100%;">
+          <!-- Winner card injected dynamically -->
+        </div>
+
+        <button id="btn-raffle-again" class="btn btn-glass" style="width: 100%;">
+          🔄 Sortear nuevamente
+        </button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Modal C: Categories Manager -->
+  <dialog id="category-dialog">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">
+          <span>🏷️</span> Gestión de Categorías
+        </h3>
+        <button id="btn-close-category-modal" class="btn-close-modal" aria-label="Cerrar modal">✕</button>
+      </div>
+
+      <!-- Current Categories List -->
+      <div id="category-list" class="category-list">
+        <!-- Injected by JS -->
+      </div>
+
+      <!-- Form: Add New Category -->
+      <form id="add-category-form" class="add-category-form">
+        <span style="font-size: 0.82rem; font-weight: 700; color: var(--accent-cyan);">+ Agregar nueva categoría</span>
+        <div class="add-category-row">
+          <input 
+            type="text" 
+            id="new-cat-name" 
+            placeholder="Nombre de la categoría..." 
+            class="url-input" 
+            style="background: rgba(255,255,255,0.08); border-radius: var(--radius-sm); padding: 0.5rem 0.75rem; font-size: 0.85rem;" 
+            required 
+          />
+          <button type="submit" class="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.82rem;">
+            Crear
+          </button>
+        </div>
+        <div style="font-size: 0.75rem; color: var(--text-muted);">Color del ticket:</div>
+        <div id="palette-container" class="color-palette-picker">
+          <!-- Injected by JS -->
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <!-- Modal D: View & Manage All Tickets & Backup -->
+  <dialog id="tickets-list-dialog">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">
+          <span>🎟️</span> Boletos en la Pecera
+        </h3>
+        <button id="btn-close-tickets-modal" class="btn-close-modal" aria-label="Cerrar modal">✕</button>
+      </div>
+
+      <!-- Auto-save notification banner -->
+      <div class="storage-status-card">
+        <div class="storage-status-header">
+          <span class="status-indicator-dot"></span>
+          <span class="storage-status-title">Guardado automático activo</span>
+        </div>
+        <p class="storage-status-desc">
+          Tus boletos se guardan al instante en tu navegador al sumergirlos. No se pierden al recargar la página o volver a entrar a tu enlace de GitHub Pages.
+        </p>
+      </div>
+
+      <!-- Tickets List Sender Filter -->
+      <div id="tickets-sender-filter-group" class="sender-pills-group" style="margin: 0.5rem 0 0.8rem; justify-content: center;">
+        <button type="button" class="sender-pill active" data-filter-sender="all">🌟 Todos</button>
+        <button type="button" class="sender-pill sender-george" data-filter-sender="George">🔵 George (<span id="count-george">0</span>)</button>
+        <button type="button" class="sender-pill sender-yenka" data-filter-sender="Yenka">💖 Yenka (<span id="count-yenka">0</span>)</button>
+      </div>
+
+      <div id="all-tickets-container" class="category-list" style="max-height: 280px;">
+        <!-- Injected by JS -->
+      </div>
+
+      <!-- Backup / Export Actions -->
+      <div class="backup-card-footer">
+        <div class="backup-help-note">
+          <span>Copia externa opcional (para transferir a otra PC o guardar archivo):</span>
+        </div>
+        <div class="backup-actions-row">
+          <button id="btn-export-data" class="btn btn-glass btn-sm" title="Descargar archivo JSON con todos los boletos">
+            💾 Descargar copia (.json)
+          </button>
+          <button id="btn-import-data" class="btn btn-glass btn-sm" title="Restaurar boletos desde un archivo JSON previo">
+            📥 Restaurar copia (.json)
+          </button>
+          <input type="file" id="import-file-input" accept=".json" style="display:none;" />
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Modal E: Mobile Shortcuts & Cloud Sync Setup -->
+  <dialog id="mobile-connect-dialog">
+    <div class="modal-card" style="max-width: 540px;">
+      <div class="modal-header">
+        <h3 class="modal-title" style="display:flex; align-items:center; gap:0.5rem;">
+          <img src="assets/icon-192.png" style="width:26px; height:26px; border-radius:50%;" alt="" />
+          <span>📱 Atajos Celulares & Nube</span>
+        </h3>
+        <button id="btn-close-mobile-modal" class="btn-close-modal" aria-label="Cerrar modal">✕</button>
+      </div>
+
+      <!-- Tab Navigation -->
+      <div class="modal-tabs-header">
+        <button type="button" class="tab-btn active" data-tab="tab-iphone">
+          🍎 iPhone (Yenka)
+        </button>
+        <button type="button" class="tab-btn" data-tab="tab-android">
+          🤖 Android (George)
+        </button>
+        <button type="button" class="tab-btn" data-tab="tab-firebase">
+          ☁️ Firebase Nube
+        </button>
+      </div>
+
+      <!-- Tab 1: iPhone (Yenka) -->
+      <div id="tab-iphone" class="tab-pane active">
+        <div class="shortcut-guide-card">
+          <h4 style="color:#ff4099; font-size:0.9rem; margin-bottom:0.4rem; display:flex; align-items:center; gap:0.4rem;">
+            💖 Atajo de 1 Toque para Yenka
+          </h4>
+          <p style="font-size:0.78rem; color:var(--text-muted); margin-bottom:0.75rem;">
+            Yenka podrá tocar <strong>"Compartir"</strong> en cualquier Reel de Instagram o TikTok y sumergirlo en la pecera con un toque, <strong>¡sin salir de la red social!</strong>
+          </p>
+
+          <div id="iphone-steps-container">
+            <!-- Populated by JS -->
+          </div>
+
+          <div class="test-badge-row">
+            <span style="font-size:0.75rem; color:var(--text-muted);">¿Quieres probar cómo se ve?</span>
+            <button id="btn-test-yenka-ticket" class="btn btn-primary" style="padding:0.35rem 0.85rem; font-size:0.75rem; background: linear-gradient(135deg, #ff2a85, #a855f7);">
+              💖 Probar boleto de Yenka
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 2: Android (George) -->
+      <div id="tab-android" class="tab-pane">
+        <div class="shortcut-guide-card">
+          <h4 style="color:#00e5ff; font-size:0.9rem; margin-bottom:0.4rem; display:flex; align-items:center; gap:0.4rem;">
+            🔵 Compartir desde Android (George)
+          </h4>
+          <p style="font-size:0.78rem; color:var(--text-muted); margin-bottom:0.75rem;">
+            En tu Android puedes agregarlo a la pantalla de inicio como App (PWA) o usar la app <strong>HTTP Shortcuts</strong> para compartir sin salir de Instagram.
+          </p>
+
+          <div id="android-steps-container">
+            <!-- Populated by JS -->
+          </div>
+
+          <div class="test-badge-row">
+            <span style="font-size:0.75rem; color:var(--text-muted);">¿Quieres probar cómo se ve?</span>
+            <button id="btn-test-george-ticket" class="btn btn-primary" style="padding:0.35rem 0.85rem; font-size:0.75rem;">
+              🔵 Probar boleto de George
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 3: Firebase Configuration -->
+      <div id="tab-firebase" class="tab-pane">
+        <div class="shortcut-guide-card">
+          <h4 style="color:#ffd166; font-size:0.9rem; margin-bottom:0.4rem; display:flex; align-items:center; gap:0.4rem;">
+            ☁️ Configuración de Firebase Firestore
+          </h4>
+          <p style="font-size:0.78rem; color:var(--text-muted); margin-bottom:0.75rem;">
+            Firebase es el servicio gratuito de Google que sincroniza los boletos en tiempo real en la nube sin requerir servidores encendidos.
+          </p>
+
+          <div id="firebase-status-banner" style="padding:0.65rem; background:rgba(0,0,0,0.3); border-radius:var(--radius-sm); margin-bottom:0.85rem; font-size:0.78rem;">
+            <!-- Status injected by JS -->
+          </div>
+
+          <form id="firebase-config-form">
+            <div style="display:flex; flex-direction:column; gap:0.5rem; margin-bottom:0.75rem;">
+              <label style="font-size:0.75rem; color:var(--text-muted);">Project ID de Firebase:</label>
+              <input type="text" id="fb-project-id" class="url-input" placeholder="ej. pecera-sorteos-12345" style="background:rgba(255,255,255,0.08); border-radius:var(--radius-sm); padding:0.45rem 0.75rem; font-size:0.82rem;" />
+              
+              <label style="font-size:0.75rem; color:var(--text-muted);">API Key de Firebase:</label>
+              <input type="text" id="fb-api-key" class="url-input" placeholder="ej. AIzaSy..." style="background:rgba(255,255,255,0.08); border-radius:var(--radius-sm); padding:0.45rem 0.75rem; font-size:0.82rem;" />
+            </div>
+
+            <div style="display:flex; gap:0.5rem;">
+              <button type="submit" class="btn btn-primary" style="flex:1; padding:0.45rem; font-size:0.8rem;">
+                💾 Guardar y Conectar
+              </button>
+              <button type="button" id="btn-fb-disconnect" class="btn btn-glass" style="padding:0.45rem; font-size:0.8rem;">
+                Desconectar
+              </button>
+            </div>
+          </form>
+
+          <div style="margin-top:0.75rem; font-size:0.72rem; color:var(--text-dim); line-height:1.4;">
+            💡 <em>Para obtener estas claves gratis: Entra a <a href="https://console.firebase.google.com" target="_blank" style="color:var(--accent-cyan);">console.firebase.google.com</a> → Crea un proyecto → Activa Cloud Firestore → Agrega una app web.</em>
+          </div>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Application Scripts (ES Modules) -->
+  <script type="module" src="scripts/app.js"></script>
+</body>
+</html>
