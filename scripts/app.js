@@ -116,7 +116,7 @@ class App {
       sound.playSplash();
       const first = items[0];
       const senderText = first.sender ? `de ${first.sender}` : '';
-      this.showToast(`✨ ¡Nuevo boleto sumergido en vivo ${senderText}!`);
+      this.showToast(`¡Nuevo boleto sumergido en vivo ${senderText}!`);
     });
 
     // If user presses enter on input
@@ -268,7 +268,7 @@ class App {
           const sender = pill.dataset.sender;
           store.setActiveSender(sender);
           this.updateSenderPillSelection();
-          this.showToast(`Remitente activo: ${sender === 'Yenka' ? '💖 Yenka' : '🔵 George'}`);
+          this.showToast(`Remitente activo: ${sender}`);
         });
       });
     }
@@ -312,7 +312,7 @@ class App {
         sound.playSplash();
         const simTicket = await shortcutsGuide.simulateExternalShare('Yenka');
         store.addTicket(simTicket);
-        this.showToast('💖 ¡Boleto simulado de Yenka sumergido con éxito!');
+        this.showToast('¡Boleto de prueba de Yenka sumergido con éxito!');
       });
     }
 
@@ -321,7 +321,7 @@ class App {
         sound.playSplash();
         const simTicket = await shortcutsGuide.simulateExternalShare('George');
         store.addTicket(simTicket);
-        this.showToast('🔵 ¡Boleto simulado de George sumergido con éxito!');
+        this.showToast('¡Boleto de prueba de George sumergido con éxito!');
       });
     }
 
@@ -422,8 +422,8 @@ class App {
     const activeSender = store.activeSender || 'George';
     const isYenka = activeSender.toLowerCase().includes('yenka');
     const senderBadge = isYenka
-      ? '<span class="sender-badge sender-badge-yenka">💖 Yenka</span>'
-      : '<span class="sender-badge sender-badge-george">🔵 George</span>';
+      ? '<span class="sender-badge sender-badge-yenka"><i class="fa-solid fa-heart" style="color:#ff4099;"></i> Yenka</span>'
+      : '<span class="sender-badge sender-badge-george"><i class="fa-solid fa-user" style="color:#00e5ff;"></i> George</span>';
 
     this.dom.previewContainer.innerHTML = `
       <div class="preview-card">
@@ -451,7 +451,7 @@ class App {
               </select>
             </div>
             <button id="btn-add-to-bowl" class="btn btn-primary" style="padding: 0.45rem 1rem; font-size: 0.85rem;">
-              💧 Sumergir en Pecera
+              <i class="fa-solid fa-water"></i> Sumergir en Pecera
             </button>
           </div>
         </div>
@@ -475,7 +475,7 @@ class App {
         sender: store.activeSender
       });
 
-      this.showToast(`¡Boleto de ${store.activeSender === 'Yenka' ? 'Yenka 💖' : 'George 🔵'} sumergido y guardado!`);
+      this.showToast(`¡Boleto de ${store.activeSender} sumergido y guardado!`);
       this.dom.urlInput.value = '';
       this.dom.previewContainer.innerHTML = '';
       this.currentPreviewData = null;
@@ -487,7 +487,7 @@ class App {
     const totalCount = store.getTicketCount(null, this.selectedRaffleSender);
     if (totalCount === 0) {
       const senderText = this.selectedRaffleSender === 'Yenka' ? 'de Yenka' : (this.selectedRaffleSender === 'George' ? 'de George' : '');
-      this.showToast(`⚠️ No hay boletos ${senderText} en la pecera.`);
+      this.showToast(`No hay boletos ${senderText} en la pecera.`);
       return;
     }
 
@@ -502,7 +502,7 @@ class App {
 
     let html = `
       <button class="raffle-choice-btn ${this.selectedRaffleCategory === 'all' ? 'active' : ''}" data-category="all">
-        <span class="raffle-btn-name">🌟 Todas</span>
+        <span class="raffle-btn-name"><i class="fa-solid fa-layer-group"></i> Todas</span>
         <span class="raffle-btn-count">${count} boletos</span>
       </button>
     `;
@@ -559,15 +559,15 @@ class App {
 
   renderWinnerCard(winner, category) {
     const platformConfig = PLATFORMS[winner.platform.toUpperCase()] || PLATFORMS.GENERIC;
-    const authorLine = winner.author ? `👤 Creador: ${winner.author}\n` : '';
+    const authorLine = winner.author ? `Creador: ${winner.author}\n` : '';
     const senderName = winner.sender || 'George';
     const isYenka = senderName.toLowerCase().includes('yenka');
-    const senderDisplay = isYenka ? 'Yenka 💖' : 'George 🔵';
+    const senderDisplay = isYenka ? 'Yenka' : 'George';
     const senderBadgeHtml = isYenka 
-      ? '<span class="sender-badge sender-badge-yenka">💖 Yenka</span>' 
-      : '<span class="sender-badge sender-badge-george">🔵 George</span>';
+      ? '<span class="sender-badge sender-badge-yenka"><i class="fa-solid fa-heart" style="color:#ff4099;"></i> Yenka</span>' 
+      : '<span class="sender-badge sender-badge-george"><i class="fa-solid fa-user" style="color:#00e5ff;"></i> George</span>';
 
-    const shareMessage = `🎉 ¡Tenemos un Ganador en Pecera Social! 🏆\n\n🎟️ Sumergido por: ${senderDisplay}\n📌 Publicación: ${winner.title}\n${authorLine}🏷️ Categoría: ${category.name}\n\n🔗 Ver publicación original:\n${winner.url}`;
+    const shareMessage = `¡Tenemos un Ganador en Pecera Social!\n\nSumergido por: ${senderDisplay}\nPublicación: ${winner.title}\n${authorLine}Categoría: ${category.name}\n\nVer publicación original:\n${winner.url}`;
     const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareMessage)}`;
 
     const mediaPreviewHtml = winner.thumbnail ? `
@@ -605,12 +605,11 @@ class App {
 
         <div class="winner-actions-grid">
           <a href="${winner.url}" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-action-post" title="Abrir publicación original en ${platformConfig.name}">
-            <span>🔗 Abrir publicación original</span> ↗
+            <i class="fa-solid fa-arrow-up-right-from-square"></i>
+            <span>Abrir publicación original</span>
           </a>
           <a href="${whatsappUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-whatsapp btn-action-share" title="Enviar enlace del ganador por WhatsApp">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M17.472 14.382c-.301-.15-1.782-.879-2.058-.98-.276-.1-.477-.15-.678.15-.2.301-.777.98-.953 1.18-.175.2-.351.226-.652.075-.301-.15-1.272-.469-2.423-1.496-.895-.798-1.5-1.784-1.676-2.085-.175-.301-.019-.464.132-.614.136-.135.301-.351.452-.527.15-.176.2-.301.301-.502.101-.2.05-.376-.025-.526-.075-.15-.678-1.634-.929-2.239-.245-.589-.494-.509-.678-.518-.175-.009-.376-.01-.577-.01-.2 0-.527.075-.803.376s-1.054 1.03-1.054 2.511 1.079 2.912 1.23 3.113c.15.2 2.122 3.24 5.14 4.544.718.31 1.278.495 1.716.634.721.23 1.378.198 1.897.12.578-.087 1.782-.728 2.033-1.432.251-.703.251-1.306.175-1.432-.075-.125-.276-.2-.577-.35zM12.04 2c-5.52 0-10 4.48-10 10 0 1.85.5 3.58 1.38 5.08L2 22l5.06-1.33A9.97 9.97 0 0 0 12.04 22c5.52 0 10-4.48 10-10s-4.48-10-10-10zm0 18.25c-1.62 0-3.13-.48-4.41-1.31l-.32-.2-3.27.86.87-3.19-.21-.34a8.21 8.21 0 0 1-1.26-4.32c0-4.55 3.7-8.25 8.25-8.25 4.55 0 8.25 3.7 8.25 8.25 0 4.55-3.7 8.25-8.25 8.25z"/>
-            </svg>
+            <i class="fa-brands fa-whatsapp" style="font-size:1.15rem;"></i>
             <span>Compartir</span>
           </a>
         </div>
@@ -637,8 +636,8 @@ class App {
           <div style="display:flex; align-items:center; gap: 0.6rem;">
             <span class="category-count">${count} tickets</span>
             ${categories.length > 1 ? `
-              <button class="btn-delete-category" data-id="${cat.id}" title="Eliminar categoría">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              <button class="btn-delete-category" data-id="${cat.id}" title="Eliminar categoría" aria-label="Eliminar categoría">
+                <i class="fa-solid fa-trash-can"></i>
               </button>
             ` : ''}
           </div>
@@ -705,8 +704,8 @@ class App {
       const plat = PLATFORMS[t.platform.toUpperCase()] || PLATFORMS.GENERIC;
       const isYenka = (t.sender || '').toLowerCase().includes('yenka');
       const senderBadgeHtml = isYenka
-        ? '<span class="sender-badge sender-badge-yenka">💖 Yenka</span>'
-        : '<span class="sender-badge sender-badge-george">🔵 George</span>';
+        ? '<span class="sender-badge sender-badge-yenka"><i class="fa-solid fa-heart" style="color:#ff4099;"></i> Yenka</span>'
+        : '<span class="sender-badge sender-badge-george"><i class="fa-solid fa-user" style="color:#00e5ff;"></i> George</span>';
 
       const avatarHtml = t.thumbnail ? `
         <div class="ticket-row-avatar-wrap">
@@ -736,11 +735,11 @@ class App {
               ${senderBadgeHtml}
             </div>
           </div>
-          <a href="${t.url}" target="_blank" class="btn btn-glass" style="padding: 0.3rem 0.6rem; font-size: 0.75rem;" title="Abrir link original">
-            ↗
+          <a href="${t.url}" target="_blank" class="btn btn-glass" style="padding: 0.35rem 0.65rem; font-size: 0.75rem;" title="Abrir link original" aria-label="Abrir enlace">
+            <i class="fa-solid fa-arrow-up-right-from-square"></i>
           </a>
-          <button class="btn-delete-category btn-del-tkt" data-id="${t.id}" title="Eliminar boleto">
-            ✕
+          <button class="btn-delete-category btn-del-tkt" data-id="${t.id}" title="Eliminar boleto" aria-label="Eliminar boleto">
+            <i class="fa-solid fa-trash-can"></i>
           </button>
         </div>
       `;
@@ -887,7 +886,14 @@ class App {
         this.dom.cloudStatusDot.className = 'cloud-dot ' + (status === 'connected' ? 'connected' : (status === 'error' ? 'error' : ''));
       }
       if (this.dom.cloudStatusText) {
-        this.dom.cloudStatusText.textContent = status === 'connected' ? 'Nube 🟢' : (status === 'connecting' ? 'Conectando...' : 'Local');
+        this.dom.cloudStatusText.textContent = status === 'connected' ? 'Nube' : (status === 'connecting' ? 'Conectando...' : 'Local');
+      }
+      if (this.dom.btnCloudStatus) {
+        const titleText = status === 'connected' 
+          ? `Nube conectada (${firebaseSync.config?.projectId || 'Firebase'})` 
+          : (status === 'connecting' ? 'Conectando a Firebase...' : 'Modo local (haz clic para conectar Firebase)');
+        this.dom.btnCloudStatus.title = titleText;
+        this.dom.btnCloudStatus.setAttribute('aria-label', titleText);
       }
       this.updateFirebaseStatusBanner();
     });
@@ -900,11 +906,13 @@ class App {
     const msg = firebaseSync.statusMessage;
 
     const color = status === 'connected' ? '#10b981' : (status === 'error' ? '#ef4444' : '#94a3b8');
-    const icon = status === 'connected' ? '🟢' : (status === 'error' ? '🔴' : '⚪');
+    const icon = status === 'connected' 
+      ? '<i class="fa-solid fa-circle-check" style="color:#10b981; margin-right:4px;"></i>' 
+      : (status === 'error' ? '<i class="fa-solid fa-circle-exclamation" style="color:#ef4444; margin-right:4px;"></i>' : '<i class="fa-solid fa-circle-pause" style="color:#94a3b8; margin-right:4px;"></i>');
 
     this.dom.firebaseStatusBanner.innerHTML = `
       <div style="display:flex; align-items:center; justify-content:space-between;">
-        <span style="font-weight:700; color:${color};">${icon} Estado: ${msg}</span>
+        <span style="font-weight:700; color:${color}; display:flex; align-items:center;">${icon} Estado: ${msg}</span>
         ${isConfigured ? '<span style="font-size:0.72rem; color:var(--text-dim);">' + (firebaseSync.config.projectId) + '</span>' : ''}
       </div>
     `;
@@ -939,16 +947,17 @@ class App {
   updateSoundToggleState() {
     const isEnabled = store.settings.soundEnabled;
     this.dom.btnAudioToggle.classList.toggle('muted', !isEnabled);
-    this.dom.btnAudioToggle.title = isEnabled ? 'Silenciar efectos' : 'Activar sonido';
+    this.dom.btnAudioToggle.title = isEnabled ? 'Silenciar efectos de sonido' : 'Activar efectos de sonido';
+    this.dom.btnAudioToggle.setAttribute('aria-label', this.dom.btnAudioToggle.title);
     this.dom.btnAudioToggle.innerHTML = isEnabled 
-      ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>`
-      : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>`;
+      ? `<i class="fa-solid fa-volume-high"></i>`
+      : `<i class="fa-solid fa-volume-xmark"></i>`;
   }
 
   showToast(message) {
     const toast = document.createElement('div');
     toast.className = 'toast';
-    toast.innerHTML = `<span>✨</span> <span>${message}</span>`;
+    toast.innerHTML = `<i class="fa-solid fa-circle-check" style="color:var(--accent-cyan); font-size:0.95rem;"></i> <span>${message}</span>`;
     this.dom.toastContainer.appendChild(toast);
 
     setTimeout(() => {

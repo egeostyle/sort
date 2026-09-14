@@ -58,7 +58,7 @@ export class ShortcutsGuide {
         },
         {
           num: 7,
-          text: 'Añade la acción final: **"Mostrar notificación"** → *"🎟️ ¡Boleto de Yenka sumergido en la Pecera! 🐟"*.'
+          text: 'Añade la acción final: **"Mostrar notificación"** → *"¡Boleto de Yenka sumergido en la Pecera!"*.'
         }
       ]
     };
