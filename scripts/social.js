@@ -1,6 +1,6 @@
 /**
  * Pecera Social - Social Media Parser & Resolver
- * High-performance URL analysis, oEmbed resolvers, platform badges & fallback card generators.
+ * High-performance URL analysis, robust metadata extraction & premium branded visual cards.
  */
 
 export const PLATFORMS = {
@@ -42,32 +42,104 @@ export const PLATFORMS = {
 };
 
 /**
- * Parses any incoming URL to determine platform, author and resource IDs
+ * Escapes unsafe characters for SVG text
+ */
+function escapeXml(unsafe) {
+  return String(unsafe || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+/**
+ * Parses any incoming URL to determine platform, author, mediaType, code and meaningful title
  */
 export function detectPlatform(urlString) {
   try {
-    const url = new URL(urlString.trim());
+    const cleanUrl = urlString.trim();
+    const url = new URL(cleanUrl);
     const host = url.hostname.toLowerCase();
     const path = url.pathname;
+    const parts = path.split('/').filter(Boolean);
 
-    // Instagram
+    // ==========================================
+    // 1. INSTAGRAM
+    // ==========================================
     if (host.includes('instagram.com') || host.includes('instagr.am')) {
       let mediaType = 'post';
       let title = 'Publicación de Instagram';
       let author = '@instagram_creator';
+      let parsedId = 'post';
 
-      if (path.includes('/reel/')) {
-        mediaType = 'reel';
-        title = 'Reel de Instagram';
-      } else if (path.includes('/stories/')) {
-        mediaType = 'story';
-        title = 'Historia de Instagram';
+      // Check for user-specific path: /[user]/reel/[code] or /[user]/p/[code]
+      if (parts.length >= 3 && ['reel', 'reels', 'p'].includes(parts[1])) {
+        author = '@' + parts[0];
+        const kind = parts[1].startsWith('reel') ? 'reel' : 'post';
+        mediaType = kind;
+        parsedId = parts[2];
+        const kindLabel = kind === 'reel' ? 'Reel' : 'Publicación';
+        title = `${kindLabel} de ${parts[0]} (${parsedId})`;
+        return { platform: PLATFORMS.INSTAGRAM, mediaType, author, title, parsedId };
       }
 
-      // Try extract handle if path is /username/p/id
-      const parts = path.split('/').filter(Boolean);
-      if (parts.length >= 2 && !['p', 'reel', 'stories'].includes(parts[0])) {
+      // Check for /share/reel/[code]
+      const shareMatch = path.match(/\/share\/reel\/([^/?#]+)/i);
+      if (shareMatch) {
+        parsedId = shareMatch[1];
+        return {
+          platform: PLATFORMS.INSTAGRAM,
+          mediaType: 'reel',
+          author: '@instagram_creator',
+          title: `Reel de Instagram (${parsedId})`,
+          parsedId
+        };
+      }
+
+      // Check for /reel/[code] or /reels/[code]
+      const reelMatch = path.match(/\/reels?\/([^/?#]+)/i);
+      if (reelMatch) {
+        parsedId = reelMatch[1];
+        return {
+          platform: PLATFORMS.INSTAGRAM,
+          mediaType: 'reel',
+          author: '@instagram_creator',
+          title: `Reel de Instagram (${parsedId})`,
+          parsedId
+        };
+      }
+
+      // Check for /p/[code]
+      const pMatch = path.match(/\/p\/([^/?#]+)/i);
+      if (pMatch) {
+        parsedId = pMatch[1];
+        return {
+          platform: PLATFORMS.INSTAGRAM,
+          mediaType: 'post',
+          author: '@instagram_creator',
+          title: `Publicación de Instagram (${parsedId})`,
+          parsedId
+        };
+      }
+
+      // Check for stories
+      if (path.includes('/stories/')) {
+        const storyUser = parts[1] || 'creator';
+        return {
+          platform: PLATFORMS.INSTAGRAM,
+          mediaType: 'story',
+          author: '@' + storyUser,
+          title: `Historia de @${storyUser}`,
+          parsedId: parts[2] || 'story'
+        };
+      }
+
+      // Fallback path extraction
+      if (parts.length > 0 && !['explore', 'direct'].includes(parts[0])) {
         author = '@' + parts[0];
+        title = `Publicación de ${parts[0]}`;
+        parsedId = parts[parts.length - 1];
       }
 
       return {
@@ -75,38 +147,136 @@ export function detectPlatform(urlString) {
         mediaType,
         author,
         title,
-        parsedId: parts[parts.length - 1] || 'post'
+        parsedId
       };
     }
 
-    // TikTok
+    // ==========================================
+    // 2. FACEBOOK
+    // ==========================================
+    if (host.includes('facebook.com') || host.includes('fb.watch')) {
+      let mediaType = 'post';
+      let author = 'Facebook Creator';
+      let title = 'Publicación de Facebook';
+      let parsedId = 'fb_post';
+
+      // fb.watch shortlinks: fb.watch/XYZ/
+      if (host.includes('fb.watch')) {
+        const code = path.replace(/^\/+/, '').split('/')[0] || 'reel';
+        return {
+          platform: PLATFORMS.FACEBOOK,
+          mediaType: 'reel',
+          author: 'Facebook Watch',
+          title: `Reel de Facebook (${code})`,
+          parsedId: code
+        };
+      }
+
+      // /share/r/ID (reel), /share/v/ID (video), /share/p/ID (post)
+      const shareMatch = path.match(/\/share\/([rvp])\/([^/?#]+)/i);
+      if (shareMatch) {
+        const typeChar = shareMatch[1].toLowerCase();
+        parsedId = shareMatch[2];
+        if (typeChar === 'r') {
+          mediaType = 'reel';
+          title = `Reel de Facebook #${parsedId}`;
+        } else if (typeChar === 'v') {
+          mediaType = 'video';
+          title = `Video de Facebook #${parsedId}`;
+        } else {
+          mediaType = 'post';
+          title = `Publicación de Facebook #${parsedId}`;
+        }
+        return { platform: PLATFORMS.FACEBOOK, mediaType, author: 'Facebook Creator', title, parsedId };
+      }
+
+      // /reel/ID or /reels/ID
+      const reelMatch = path.match(/\/reels?\/([^/?#]+)/i);
+      if (reelMatch) {
+        parsedId = reelMatch[1];
+        return {
+          platform: PLATFORMS.FACEBOOK,
+          mediaType: 'reel',
+          author: 'Facebook Creator',
+          title: `Reel de Facebook (${parsedId})`,
+          parsedId
+        };
+      }
+
+      // /watch/?v=ID
+      if (path.includes('/watch')) {
+        const v = url.searchParams.get('v') || '';
+        parsedId = v || 'watch';
+        return {
+          platform: PLATFORMS.FACEBOOK,
+          mediaType: 'video',
+          author: 'Facebook Watch',
+          title: v ? `Video de Facebook (${v})` : 'Video de Facebook',
+          parsedId
+        };
+      }
+
+      // /[page]/videos/[id] or /[page]/posts/[id] or /[page]/reels/[id]
+      const userMediaMatch = path.match(/^\/([^/]+)\/(videos|posts|reels)\/([^/?#]+)/i);
+      if (userMediaMatch) {
+        const user = decodeURIComponent(userMediaMatch[1]);
+        const kind = userMediaMatch[2].toLowerCase();
+        parsedId = userMediaMatch[3];
+        const kindLabel = kind === 'reels' ? 'Reel' : (kind === 'videos' ? 'Video' : 'Post');
+        mediaType = kind === 'reels' ? 'reel' : (kind === 'videos' ? 'video' : 'post');
+        return {
+          platform: PLATFORMS.FACEBOOK,
+          mediaType,
+          author: `@${user}`,
+          title: `${kindLabel} de ${user} (#${parsedId})`,
+          parsedId
+        };
+      }
+
+      // Generic Facebook page path
+      if (parts.length > 0 && !['home.php', 'login', 'watch'].includes(parts[0])) {
+        author = '@' + parts[0];
+        title = `Publicación de ${parts[0]}`;
+        parsedId = parts[parts.length - 1];
+      }
+
+      return {
+        platform: PLATFORMS.FACEBOOK,
+        mediaType,
+        author,
+        title,
+        parsedId
+      };
+    }
+
+    // ==========================================
+    // 3. TIKTOK
+    // ==========================================
     if (host.includes('tiktok.com')) {
-      const parts = path.split('/').filter(Boolean);
       let author = '@tiktok_user';
+      let title = 'Video de TikTok';
+      let parsedId = 'video';
+
       if (parts[0] && parts[0].startsWith('@')) {
         author = parts[0];
       }
+      if (parts.length > 0) {
+        parsedId = parts[parts.length - 1];
+        title = `Video de ${author}`;
+      }
+
       return {
         platform: PLATFORMS.TIKTOK,
         mediaType: 'video',
         author,
-        title: 'Video de TikTok',
-        parsedId: parts[parts.length - 1] || 'video'
+        title,
+        parsedId
       };
     }
 
-    // Facebook
-    if (host.includes('facebook.com') || host.includes('fb.watch')) {
-      return {
-        platform: PLATFORMS.FACEBOOK,
-        mediaType: path.includes('reel') ? 'reel' : 'post',
-        author: 'Facebook Creator',
-        title: 'Publicación de Facebook',
-        parsedId: 'fb_post'
-      };
-    }
-
-    // YouTube
+    // ==========================================
+    // 4. YOUTUBE
+    // ==========================================
     if (host.includes('youtube.com') || host.includes('youtu.be')) {
       let videoId = '';
       if (host.includes('youtu.be')) {
@@ -119,18 +289,20 @@ export function detectPlatform(urlString) {
       return {
         platform: PLATFORMS.YOUTUBE,
         mediaType: path.includes('shorts') ? 'short' : 'video',
-        author: 'YouTube Channel',
+        author: 'YouTube',
         title: 'Video de YouTube',
         parsedId: videoId
       };
     }
 
-    // Generic
+    // ==========================================
+    // 5. GENERIC WEB
+    // ==========================================
     return {
       platform: PLATFORMS.GENERIC,
       mediaType: 'link',
-      author: url.hostname,
-      title: 'Enlace Web Guardado',
+      author: host.replace(/^www\./, ''),
+      title: `Enlace Web (${host})`,
       parsedId: 'link'
     };
   } catch (err) {
@@ -139,43 +311,241 @@ export function detectPlatform(urlString) {
 }
 
 /**
- * Generates an SVG Data URI placeholder for when network/CORS prevents image loading
+ * Generates a high-fidelity, vibrant SVG social preview card.
+ * Used for instant display and robust offline / hotlinking-proof fallback.
  */
-export function generatePlaceholderSvg(platform, title, author) {
-  const gradient = platform.gradient || PLATFORMS.GENERIC.gradient;
-  const name = platform.name || 'Social';
-  const displayAuthor = author ? author : '@social_post';
+export function generatePlaceholderSvg(platform, title, author, mediaType, code) {
+  const p = (platform?.id || 'generic').toLowerCase();
+  const safeAuthor = escapeXml(author || `@${platform?.name?.toLowerCase() || 'social'}`);
+  const safeCode = escapeXml(code ? (code.startsWith('#') ? code : '#' + code) : '');
+  const badgeType = escapeXml((mediaType || 'post').toUpperCase());
 
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400">
-    <defs>
-      <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stop-color="#0a192f"/>
-        <stop offset="100%" stop-color="#020914"/>
+  let bgDefs = '';
+  let iconSvg = '';
+  let accentColor = '#00E5FF';
+  let watermarkText = platform?.name?.toUpperCase() || 'SOCIAL';
+
+  if (p === 'instagram') {
+    accentColor = '#E1306C';
+    watermarkText = 'INSTAGRAM';
+    bgDefs = `
+      <radialGradient id="igGlow" cx="15%" cy="10%" r="95%">
+        <stop offset="0%" stop-color="#FFDC80"/>
+        <stop offset="18%" stop-color="#FCAF45"/>
+        <stop offset="38%" stop-color="#F77737"/>
+        <stop offset="55%" stop-color="#F56040"/>
+        <stop offset="72%" stop-color="#FD1D1D"/>
+        <stop offset="85%" stop-color="#E1306C"/>
+        <stop offset="92%" stop-color="#C13584"/>
+        <stop offset="100%" stop-color="#833AB4"/>
+      </radialGradient>
+      <linearGradient id="cardGlass" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#ffffff" stop-opacity="0.22"/>
+        <stop offset="100%" stop-color="#ffffff" stop-opacity="0.06"/>
       </linearGradient>
-      <radialGradient id="glow" cx="50%" cy="40%" r="50%">
-        <stop offset="0%" stop-color="${platform.color}" stop-opacity="0.5"/>
+    `;
+    iconSvg = `
+      <g transform="translate(145, 120) scale(4.5)" fill="none" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+        <circle cx="12" cy="12" r="4.2"/>
+        <circle cx="17.5" cy="6.5" r="1.2" fill="#ffffff" stroke="none"/>
+      </g>
+    `;
+  } else if (p === 'facebook') {
+    accentColor = '#1877F2';
+    watermarkText = 'FACEBOOK';
+    bgDefs = `
+      <linearGradient id="fbGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#1877F2"/>
+        <stop offset="45%" stop-color="#0E5AC8"/>
+        <stop offset="100%" stop-color="#062F76"/>
+      </linearGradient>
+      <linearGradient id="cardGlass" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#ffffff" stop-opacity="0.25"/>
+        <stop offset="100%" stop-color="#ffffff" stop-opacity="0.08"/>
+      </linearGradient>
+      <radialGradient id="fbLight" cx="30%" cy="20%" r="70%">
+        <stop offset="0%" stop-color="#4B9AFF" stop-opacity="0.5"/>
+        <stop offset="100%" stop-color="#062F76" stop-opacity="0"/>
+      </radialGradient>
+    `;
+    iconSvg = `
+      <g transform="translate(140, 115)">
+        <circle cx="60" cy="60" r="56" fill="#ffffff"/>
+        <path d="M68.5 62.5H78L79.5 50H68.5V42C68.5 38.5 70 35 75.5 35H80V24.5C80 24.5 76 24 72 24C63.5 24 58 29.2 58 38.5V50H48V62.5H58V96H68.5V62.5Z" fill="#1877F2"/>
+      </g>
+    `;
+  } else if (p === 'tiktok') {
+    accentColor = '#25F4EE';
+    watermarkText = 'TIKTOK';
+    bgDefs = `
+      <linearGradient id="ttBg" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#0F1117"/>
+        <stop offset="100%" stop-color="#010101"/>
+      </linearGradient>
+      <radialGradient id="ttCyan" cx="20%" cy="30%" r="55%">
+        <stop offset="0%" stop-color="#25F4EE" stop-opacity="0.35"/>
         <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
       </radialGradient>
+      <radialGradient id="ttRed" cx="80%" cy="70%" r="55%">
+        <stop offset="0%" stop-color="#FE2C55" stop-opacity="0.35"/>
+        <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+      </radialGradient>
+      <linearGradient id="cardGlass" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#ffffff" stop-opacity="0.15"/>
+        <stop offset="100%" stop-color="#ffffff" stop-opacity="0.05"/>
+      </linearGradient>
+    `;
+    iconSvg = `
+      <g transform="translate(140, 110) scale(4.8)">
+        <path d="M12.5 0c1.3 0 2.6 0 3.9 0 .1 1.5.6 3.1 1.7 4.2 1.1 1.1 2.7 1.6 4.2 1.8v4c-1.4 0-2.9-.3-4.2-1-.6-.3-1.1-.6-1.6-.9 0 2.9 0 5.8 0 8.7-.1 1.4-.5 2.8-1.3 3.9-1.3 1.9-3.6 3.2-5.9 3.2-1.4.1-2.9-.3-4.1-1-2-1.2-3.4-3.4-3.6-5.7 0-.5 0-1 0-1.5.2-1.9 1.1-3.7 2.6-5 1.7-1.4 4-2.1 6.1-1.7v4.4c-1-.3-2.1-.2-3 .4-.6.4-1.1 1-1.4 1.7-.2.5-.2 1.1-.1 1.6.2 1.6 1.8 2.9 3.5 2.8 1.4 0 2.6-.9 3-2.1.2-.6.3-1.3.3-1.9 0-4.9 0-9.8 0-14.7z" fill="#25F4EE" transform="translate(-1, -1)"/>
+        <path d="M12.5 0c1.3 0 2.6 0 3.9 0 .1 1.5.6 3.1 1.7 4.2 1.1 1.1 2.7 1.6 4.2 1.8v4c-1.4 0-2.9-.3-4.2-1-.6-.3-1.1-.6-1.6-.9 0 2.9 0 5.8 0 8.7-.1 1.4-.5 2.8-1.3 3.9-1.3 1.9-3.6 3.2-5.9 3.2-1.4.1-2.9-.3-4.1-1-2-1.2-3.4-3.4-3.6-5.7 0-.5 0-1 0-1.5.2-1.9 1.1-3.7 2.6-5 1.7-1.4 4-2.1 6.1-1.7v4.4c-1-.3-2.1-.2-3 .4-.6.4-1.1 1-1.4 1.7-.2.5-.2 1.1-.1 1.6.2 1.6 1.8 2.9 3.5 2.8 1.4 0 2.6-.9 3-2.1.2-.6.3-1.3.3-1.9 0-4.9 0-9.8 0-14.7z" fill="#FE2C55" transform="translate(1, 1)"/>
+        <path d="M12.5 0c1.3 0 2.6 0 3.9 0 .1 1.5.6 3.1 1.7 4.2 1.1 1.1 2.7 1.6 4.2 1.8v4c-1.4 0-2.9-.3-4.2-1-.6-.3-1.1-.6-1.6-.9 0 2.9 0 5.8 0 8.7-.1 1.4-.5 2.8-1.3 3.9-1.3 1.9-3.6 3.2-5.9 3.2-1.4.1-2.9-.3-4.1-1-2-1.2-3.4-3.4-3.6-5.7 0-.5 0-1 0-1.5.2-1.9 1.1-3.7 2.6-5 1.7-1.4 4-2.1 6.1-1.7v4.4c-1-.3-2.1-.2-3 .4-.6.4-1.1 1-1.4 1.7-.2.5-.2 1.1-.1 1.6.2 1.6 1.8 2.9 3.5 2.8 1.4 0 2.6-.9 3-2.1.2-.6.3-1.3.3-1.9 0-4.9 0-9.8 0-14.7z" fill="#FFFFFF"/>
+      </g>
+    `;
+  } else if (p === 'youtube') {
+    accentColor = '#FF0000';
+    watermarkText = 'YOUTUBE';
+    bgDefs = `
+      <linearGradient id="ytBg" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#E50914"/>
+        <stop offset="60%" stop-color="#990000"/>
+        <stop offset="100%" stop-color="#3A0000"/>
+      </linearGradient>
+      <linearGradient id="cardGlass" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#ffffff" stop-opacity="0.22"/>
+        <stop offset="100%" stop-color="#ffffff" stop-opacity="0.06"/>
+      </linearGradient>
+    `;
+    iconSvg = `
+      <g transform="translate(135, 125)">
+        <rect width="130" height="90" rx="24" fill="#ffffff"/>
+        <polygon points="52,30 88,45 52,60" fill="#FF0000"/>
+      </g>
+    `;
+  } else {
+    accentColor = '#00E5FF';
+    watermarkText = 'WEB';
+    bgDefs = `
+      <linearGradient id="webBg" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#0288D1"/>
+        <stop offset="50%" stop-color="#01579B"/>
+        <stop offset="100%" stop-color="#001833"/>
+      </linearGradient>
+      <linearGradient id="cardGlass" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#ffffff" stop-opacity="0.2"/>
+        <stop offset="100%" stop-color="#ffffff" stop-opacity="0.05"/>
+      </linearGradient>
+    `;
+    iconSvg = `
+      <g transform="translate(145, 120) scale(4.5)" fill="none" stroke="#ffffff" stroke-width="1.8">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="2" y1="12" x2="22" y2="12"/>
+        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+      </g>
+    `;
+  }
+
+  const bgFill = p === 'instagram' ? 'url(#igGlow)' : (p === 'facebook' ? 'url(#fbGrad)' : (p === 'tiktok' ? 'url(#ttBg)' : (p === 'youtube' ? 'url(#ytBg)' : 'url(#webBg)')));
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="100%" height="100%">
+    <defs>
+      ${bgDefs}
+      <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+        <feDropShadow dx="0" dy="6" stdDeviation="8" flood-opacity="0.4"/>
+      </filter>
     </defs>
-    <rect width="100%" height="100%" fill="url(#bg)"/>
-    <circle cx="200" cy="180" r="160" fill="url(#glow)"/>
-    <g transform="translate(170, 130) scale(2.5)">
-      <circle cx="12" cy="12" r="12" fill="${platform.color}" fill-opacity="0.2"/>
+
+    <!-- Main Background -->
+    <rect width="400" height="400" fill="${bgFill}"/>
+    ${p === 'facebook' ? '<rect width="400" height="400" fill="url(#fbLight)"/>' : ''}
+    ${p === 'tiktok' ? '<rect width="400" height="400" fill="url(#ttCyan)"/><rect width="400" height="400" fill="url(#ttRed)"/>' : ''}
+
+    <!-- Decorative Geometric Rings -->
+    <circle cx="200" cy="180" r="150" fill="none" stroke="#ffffff" stroke-opacity="0.08" stroke-width="1.5"/>
+    <circle cx="200" cy="180" r="120" fill="none" stroke="#ffffff" stroke-opacity="0.06" stroke-width="1.5" stroke-dasharray="6,6"/>
+
+    <!-- Frosted Glass Card Container -->
+    <rect x="24" y="24" width="352" height="352" rx="28" fill="url(#cardGlass)" stroke="#ffffff" stroke-opacity="0.28" stroke-width="1.2" filter="url(#shadow)"/>
+
+    <!-- Top Badge Row -->
+    <g transform="translate(42, 44)">
+      <rect x="0" y="0" width="76" height="28" rx="14" fill="#000000" fill-opacity="0.55"/>
+      <text x="38" y="19" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12" font-weight="800" fill="#ffffff" text-anchor="middle" letter-spacing="1">${badgeType}</text>
     </g>
-    <text x="200" y="240" font-family="-apple-system, sans-serif" font-size="20" font-weight="bold" fill="#ffffff" text-anchor="middle">${name}</text>
-    <text x="200" y="270" font-family="-apple-system, sans-serif" font-size="14" fill="#94adc8" text-anchor="middle">${displayAuthor}</text>
-    <circle cx="200" cy="160" r="26" fill="${platform.color}"/>
-    <polygon points="194,147 212,160 194,173" fill="#ffffff"/>
+
+    <!-- Watermark Brand on Top Right -->
+    <g transform="translate(358, 64)">
+      <text x="0" y="0" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="900" fill="#ffffff" fill-opacity="0.6" text-anchor="end" letter-spacing="1.5">${watermarkText}</text>
+    </g>
+
+    <!-- Center Icon -->
+    <g filter="url(#shadow)">
+      ${iconSvg}
+    </g>
+
+    <!-- Bottom Content Card Overlay -->
+    <rect x="36" y="270" width="328" height="94" rx="20" fill="#000000" fill-opacity="0.5" stroke="#ffffff" stroke-opacity="0.15" stroke-width="1"/>
+    
+    <!-- Author / User Handle -->
+    <text x="56" y="306" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="17" font-weight="800" fill="#ffffff" filter="url(#shadow)">${safeAuthor}</text>
+    
+    <!-- Code or Subtitle -->
+    <text x="56" y="330" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12" font-weight="600" fill="${accentColor}" letter-spacing="0.5">${safeCode || badgeType}</text>
+    
+    <!-- Action / Play Emblem on Bottom Right -->
+    <g transform="translate(322, 305)">
+      <circle cx="12" cy="12" r="16" fill="${accentColor}" fill-opacity="0.25"/>
+      <circle cx="12" cy="12" r="11" fill="${accentColor}"/>
+      <polygon points="9,7 18,12 9,17" fill="#ffffff"/>
+    </g>
   </svg>`;
 
   return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
 }
 
 /**
+ * Checks whether an extracted title is a generic gatekeeper string rather than actual content
+ */
+function isGarbageTitle(title, parsedId) {
+  if (!title) return true;
+  const t = title.trim().toLowerCase();
+  if (t.length <= 2) return true;
+  if (parsedId && (t === parsedId.toLowerCase() || t === ('#' + parsedId).toLowerCase())) return true;
+  const badPhrases = [
+    'log in or sign up to view',
+    'log in to view',
+    'iniciar sesión',
+    'iniciar sesión o registrarte',
+    'login • instagram',
+    'post isn\'t available',
+    'facebook',
+    'instagram',
+    'tiktok',
+    'untitled',
+    'security check',
+    'just a moment'
+  ];
+  return badPhrases.some(b => t === b || t.startsWith(b));
+}
+
+/**
+ * Checks whether an extracted thumbnail is a login icon or placeholder
+ */
+function isGarbageThumbnail(url) {
+  if (!url) return true;
+  const u = url.toLowerCase();
+  if (u.includes('rsrc.php') || u.includes('static.xx.fbcdn.net') || u.includes('static.cdninstagram.com')) {
+    return true;
+  }
+  return false;
+}
+
+/**
  * Resolves metadata using cascading strategies:
  * 1. Native open oEmbed (TikTok, YouTube)
- * 2. Public CORS fallback (Noembed)
- * 3. High-fidelity synthetic card generator
+ * 2. Scraper APIs (Microlink / Noembed) with strict login-wall rejection
+ * 3. High-fidelity synthetic card generator & smart URL parser
  */
 export async function resolveSocialMetadata(rawUrl) {
   const detected = detectPlatform(rawUrl);
@@ -184,6 +554,7 @@ export async function resolveSocialMetadata(rawUrl) {
   }
 
   const { platform, mediaType, author, title, parsedId } = detected;
+  const brandedSvg = generatePlaceholderSvg(platform, title, author, mediaType, parsedId);
 
   // Initialize result with high-fidelity defaults
   const result = {
@@ -194,17 +565,18 @@ export async function resolveSocialMetadata(rawUrl) {
     author: author,
     title: title,
     mediaType: mediaType,
-    thumbnail: generatePlaceholderSvg(platform, title, author)
+    thumbnail: brandedSvg,
+    fallbackSvg: brandedSvg
   };
 
-  // Strategy A: YouTube direct thumbnail
+  // Strategy A: YouTube direct thumbnail + title
   if (platform.id === 'youtube' && parsedId) {
     result.thumbnail = `https://img.youtube.com/vi/${parsedId}/hqdefault.jpg`;
     try {
       const res = await fetch(`https://noembed.com/embed?url=${encodeURIComponent(rawUrl)}`);
       if (res.ok) {
         const data = await res.json();
-        if (data.title) result.title = data.title;
+        if (data.title && !isGarbageTitle(data.title, parsedId)) result.title = data.title;
         if (data.author_name) result.author = data.author_name;
       }
     } catch (e) {
@@ -213,15 +585,17 @@ export async function resolveSocialMetadata(rawUrl) {
     return result;
   }
 
-  // Strategy B: TikTok oEmbed
+  // Strategy B: TikTok oEmbed (returns real caption and thumbnail!)
   if (platform.id === 'tiktok') {
     try {
       const res = await fetch(`https://www.tiktok.com/oembed?url=${encodeURIComponent(rawUrl)}`);
       if (res.ok) {
         const data = await res.json();
-        if (data.title) result.title = data.title;
+        if (data.title && !isGarbageTitle(data.title, parsedId)) result.title = data.title;
         if (data.author_name) result.author = '@' + data.author_name;
-        if (data.thumbnail_url) result.thumbnail = data.thumbnail_url;
+        if (data.thumbnail_url && !isGarbageThumbnail(data.thumbnail_url)) {
+          result.thumbnail = data.thumbnail_url;
+        }
         return result;
       }
     } catch (e) {
@@ -229,19 +603,74 @@ export async function resolveSocialMetadata(rawUrl) {
     }
   }
 
-  // Strategy C: Noembed service (Supports IG/FB public links when accessible)
+  // Strategy C: Microlink API (Tested for OpenGraph extraction without auth gate)
   try {
-    const res = await fetch(`https://noembed.com/embed?url=${encodeURIComponent(rawUrl)}`);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3500);
+    const res = await fetch(`https://api.microlink.io?url=${encodeURIComponent(rawUrl)}`, {
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+
     if (res.ok) {
-      const data = await res.json();
-      if (data.title) result.title = data.title;
-      if (data.author_name) result.author = data.author_name;
-      if (data.thumbnail_url) result.thumbnail = data.thumbnail_url;
-      return result;
+      const json = await res.json();
+      if (json.status === 'success' && json.data) {
+        const d = json.data;
+        if (d.title && !isGarbageTitle(d.title, parsedId)) {
+          result.title = d.title;
+        }
+        if (d.author && !isGarbageTitle(d.author, parsedId)) {
+          result.author = d.author.startsWith('@') ? d.author : `@${d.author}`;
+        }
+        if (d.image?.url && !isGarbageThumbnail(d.image.url)) {
+          result.thumbnail = d.image.url;
+        }
+        return result;
+      }
     }
   } catch (e) {
-    // If blocked by CORS or network, fallback gracefully
+    // Microlink timed out or was blocked; continue
+  }
+
+  // Strategy D: Noembed service (fallback)
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2000);
+    const res = await fetch(`https://noembed.com/embed?url=${encodeURIComponent(rawUrl)}`, {
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data.title && !isGarbageTitle(data.title, parsedId)) result.title = data.title;
+      if (data.author_name) result.author = data.author_name;
+      if (data.thumbnail_url && !isGarbageThumbnail(data.thumbnail_url)) {
+        result.thumbnail = data.thumbnail_url;
+      }
+    }
+  } catch (e) {
+    // Fallback gracefully to smart reconstructed metadata and branded card
   }
 
   return result;
+}
+
+/**
+ * Validates and heals thumbnails from saved tickets (e.g. replacing legacy dark placeholders or login icons)
+ */
+export function getValidThumbnail(thumb, platform, title, author, mediaType, id) {
+  const fallbackSvg = generatePlaceholderSvg(platform, title, author, mediaType, id);
+  if (!thumb) return fallbackSvg;
+  if (typeof thumb !== 'string') return fallbackSvg;
+  
+  // Detect old legacy dark SVG
+  if (thumb.includes('%23glow') || thumb.includes('#glow')) {
+    return fallbackSvg;
+  }
+  // Detect login favicon / static CDN wall
+  if (thumb.includes('rsrc.php') || thumb.includes('static.xx.fbcdn.net') || thumb.includes('static.cdninstagram.com')) {
+    return fallbackSvg;
+  }
+  return thumb;
 }

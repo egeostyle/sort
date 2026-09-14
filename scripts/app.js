@@ -4,12 +4,21 @@
  */
 
 import { store } from './store.js';
-import { PLATFORMS, resolveSocialMetadata } from './social.js';
+import { PLATFORMS, resolveSocialMetadata, generatePlaceholderSvg, getValidThumbnail } from './social.js';
 import { FishbowlController } from './fishbowl.js';
 import { ConfettiCannon } from './confetti.js';
 import { sound } from './sound.js';
 import { firebaseSync } from './firebase-sync.js';
 import { shortcutsGuide } from './shortcuts-guide.js';
+
+function escapeHtml(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
 
 class App {
   constructor() {
@@ -20,6 +29,7 @@ class App {
     this.currentWinner = null;
     this.fishbowlController = null;
     this.confetti = null;
+    this.store = store;
 
     this.dom = {
       // Input & Preview
@@ -425,10 +435,13 @@ class App {
       ? '<span class="sender-badge sender-badge-yenka"><i class="fa-solid fa-heart" style="color:#ff4099;"></i> Yenka</span>'
       : '<span class="sender-badge sender-badge-george"><i class="fa-solid fa-user" style="color:#00e5ff;"></i> George</span>';
 
+    const fallbackSvg = data.fallbackSvg || generatePlaceholderSvg(platformConfig, data.title, data.author, data.mediaType, data.parsedId);
+    const thumbSrc = data.thumbnail || fallbackSvg;
+
     this.dom.previewContainer.innerHTML = `
       <div class="preview-card">
         <div class="preview-thumbnail-box">
-          <img src="${data.thumbnail}" class="preview-img" alt="Vista previa" onerror="this.src='${data.thumbnail}'" />
+          <img src="${thumbSrc}" class="preview-img" alt="Vista previa" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='${fallbackSvg}';" />
           <span class="preview-media-type-badge">${data.mediaType}</span>
         </div>
         <div class="preview-content">
@@ -438,9 +451,11 @@ class App {
                 ${platformConfig.iconSvg} ${platformConfig.name}
               </span>
               ${senderBadge}
-              <span class="preview-author">${data.author}</span>
+              <span class="preview-author">${escapeHtml(data.author)}</span>
             </div>
-            <h4 class="preview-title">${data.title}</h4>
+            <div class="preview-title-field-wrap">
+              <input type="text" id="preview-title-input" class="preview-title-input" value="${escapeHtml(data.title)}" placeholder="Nombre o nota del boleto..." aria-label="Título del boleto" />
+            </div>
           </div>
 
           <div class="preview-controls">
@@ -461,15 +476,17 @@ class App {
     // Bind add button
     const btnAdd = document.getElementById('btn-add-to-bowl');
     const categorySelect = document.getElementById('preview-category-select');
+    const titleInput = document.getElementById('preview-title-input');
 
     btnAdd.addEventListener('click', () => {
       const selectedCatId = categorySelect.value;
+      const finalTitle = (titleInput?.value || '').trim() || data.title;
       const ticket = store.addTicket({
         url: data.url,
         platform: data.platform,
-        title: data.title,
+        title: finalTitle,
         author: data.author,
-        thumbnail: data.thumbnail,
+        thumbnail: thumbSrc,
         mediaType: data.mediaType,
         categoryId: selectedCatId,
         sender: store.activeSender
@@ -570,15 +587,11 @@ class App {
     const shareMessage = `¡Tenemos un Ganador en Pecera Social!\n\nSumergido por: ${senderDisplay}\nPublicación: ${winner.title}\n${authorLine}Categoría: ${category.name}\n\nVer publicación original:\n${winner.url}`;
     const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareMessage)}`;
 
-    const mediaPreviewHtml = winner.thumbnail ? `
-      <img src="${winner.thumbnail}" class="winner-img" alt="${winner.title}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
-      <div class="winner-img-fallback" style="display:none; background: ${platformConfig.gradient};">
-        ${platformConfig.iconSvg}
-      </div>
-    ` : `
-      <div class="winner-img-fallback" style="background: ${platformConfig.gradient};">
-        ${platformConfig.iconSvg}
-      </div>
+    const fallbackSvg = generatePlaceholderSvg(platformConfig, winner.title, winner.author, winner.mediaType, winner.id);
+    const thumbSrc = getValidThumbnail(winner.thumbnail, platformConfig, winner.title, winner.author, winner.mediaType, winner.id);
+
+    const mediaPreviewHtml = `
+      <img src="${thumbSrc}" class="winner-img" alt="${escapeHtml(winner.title)}" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='${fallbackSvg}';" />
     `;
 
     this.dom.winnerCardContainer.innerHTML = `
@@ -707,16 +720,12 @@ class App {
         ? '<span class="sender-badge sender-badge-yenka"><i class="fa-solid fa-heart" style="color:#ff4099;"></i> Yenka</span>'
         : '<span class="sender-badge sender-badge-george"><i class="fa-solid fa-user" style="color:#00e5ff;"></i> George</span>';
 
-      const avatarHtml = t.thumbnail ? `
+      const fallbackSvg = generatePlaceholderSvg(plat, t.title, t.author, t.mediaType, t.id);
+      const thumbSrc = getValidThumbnail(t.thumbnail, plat, t.title, t.author, t.mediaType, t.id);
+
+      const avatarHtml = `
         <div class="ticket-row-avatar-wrap">
-          <img src="${t.thumbnail}" class="ticket-row-img" alt="" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
-          <div class="ticket-row-avatar" style="display:none; background: ${cat.color}22; color: ${cat.color}; border: 1px solid ${cat.color}55;">
-            ${plat.iconSvg}
-          </div>
-        </div>
-      ` : `
-        <div class="ticket-row-avatar" style="background: ${cat.color}22; color: ${cat.color}; border: 1px solid ${cat.color}55;">
-          ${plat.iconSvg}
+          <img src="${thumbSrc}" class="ticket-row-img" alt="" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='${fallbackSvg}';" />
         </div>
       `;
 
@@ -971,4 +980,5 @@ class App {
 document.addEventListener('DOMContentLoaded', () => {
   const app = new App();
   app.init();
+  window.app = app;
 });
