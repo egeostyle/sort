@@ -1,6 +1,8 @@
-# 🐟 Pecera Social - Sorteo Interactivo de Publicaciones
+# 🐟 Pecera Social - Sorteos George & Yenka
 
-> Webapp lúdica, responsiva y de alto rendimiento diseñada con estética acuática moderna para almacenar enlaces de redes sociales (Instagram, TikTok, Facebook, YouTube, etc.) en forma de tickets sumergidos en una pecera interactiva y realizar sorteos aleatorios por categorías.
+> Webapp lúdica, responsiva y en tiempo real diseñada con estética acuática moderna para almacenar enlaces de redes sociales (Instagram, TikTok, Facebook, YouTube, etc.) en forma de tickets sumergidos en una pecera interactiva y realizar sorteos aleatorios.
+>
+> 🌐 **Sitio en vivo en GitHub Pages:** [https://egeostyle.github.io/sort/](https://egeostyle.github.io/sort/)
 
 ---
 
