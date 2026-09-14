@@ -6,6 +6,16 @@
 
 const FIREBASE_STORAGE_KEY = 'pecera_social_firebase_config_v1';
 
+export const DEFAULT_FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDLl_2Wjkh4wYGqISIkmiYcL5vkgTWcGqo",
+  authDomain: "fishtickets.firebaseapp.com",
+  projectId: "fishtickets",
+  storageBucket: "fishtickets.firebasestorage.app",
+  messagingSenderId: "811875185407",
+  appId: "1:811875185407:web:3d426b1192705b696912ca",
+  measurementId: "G-D3KB2TPKEY"
+};
+
 export class FirebaseSync {
   constructor() {
     this.app = null;
@@ -31,7 +41,7 @@ export class FirebaseSync {
     } catch (e) {
       console.warn('Could not read firebase config:', e);
     }
-    return null;
+    return { ...DEFAULT_FIREBASE_CONFIG };
   }
 
   saveConfig(newConfig) {
