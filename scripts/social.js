@@ -755,11 +755,41 @@ function isGarbageThumbnail(url) {
   return false;
 }
 
+const METADATA_CACHE_KEY = 'sorteitos_metadata_cache_v1';
+
+function getCachedMetadata(url) {
+  try {
+    const raw = localStorage.getItem(METADATA_CACHE_KEY);
+    if (!raw) return null;
+    const cache = JSON.parse(raw);
+    const item = cache[url];
+    // Cache is valid for 7 days
+    if (item && item.timestamp && (Date.now() - item.timestamp < 7 * 24 * 3600 * 1000)) {
+      return item.data;
+    }
+  } catch (e) {}
+  return null;
+}
+
+function setCachedMetadata(url, data) {
+  try {
+    const raw = localStorage.getItem(METADATA_CACHE_KEY);
+    const cache = raw ? JSON.parse(raw) : {};
+    cache[url] = { timestamp: Date.now(), data };
+    const keys = Object.keys(cache);
+    if (keys.length > 150) {
+      delete cache[keys[0]];
+    }
+    localStorage.setItem(METADATA_CACHE_KEY, JSON.stringify(cache));
+  } catch (e) {}
+}
+
 /**
  * Resolves metadata using cascading strategies:
- * 1. Native open oEmbed (TikTok, YouTube)
- * 2. Scraper APIs (Microlink / Noembed) with strict login-wall rejection
- * 3. High-fidelity synthetic card generator & smart URL parser
+ * 1. Local memory/localStorage cache (instant, 0 network)
+ * 2. Native open oEmbed (TikTok, YouTube)
+ * 3. Scraper APIs (Microlink with optional API key & proxying)
+ * 4. High-fidelity synthetic card generator & smart URL parser
  */
 export async function resolveSocialMetadata(rawUrl) {
   const cleanExtraction = extractAndCleanUrl(rawUrl);
@@ -767,6 +797,12 @@ export async function resolveSocialMetadata(rawUrl) {
   const detected = detectPlatform(cleanUrl);
   if (!detected) {
     throw new Error('URL inválida o no soportada');
+  }
+
+  // Strategy 0: Cache lookup
+  const cached = getCachedMetadata(cleanUrl);
+  if (cached) {
+    return { ...cached, url: cleanUrl };
   }
 
   const { platform, mediaType, author, title, parsedId } = detected;
@@ -798,6 +834,7 @@ export async function resolveSocialMetadata(rawUrl) {
     } catch (e) {
       // Fallback works automatically
     }
+    setCachedMetadata(cleanUrl, result);
     return result;
   }
 
@@ -812,6 +849,7 @@ export async function resolveSocialMetadata(rawUrl) {
         if (data.thumbnail_url && !isGarbageThumbnail(data.thumbnail_url)) {
           result.thumbnail = data.thumbnail_url;
         }
+        setCachedMetadata(cleanUrl, result);
         return result;
       }
     } catch (e) {
@@ -819,11 +857,21 @@ export async function resolveSocialMetadata(rawUrl) {
     }
   }
 
-  // Strategy C: Microlink API (Tested for OpenGraph extraction without auth gate)
+  // Strategy C: Microlink API (OpenGraph extraction with optional user API key)
   try {
+    let userApiKey = '';
+    try {
+      userApiKey = localStorage.getItem('sorteitos_microlink_key') || '';
+    } catch (e) {}
+
+    let microlinkEndpoint = `https://api.microlink.io?url=${encodeURIComponent(cleanUrl)}`;
+    if (userApiKey && userApiKey.trim()) {
+      microlinkEndpoint += `&apiKey=${encodeURIComponent(userApiKey.trim())}`;
+    }
+
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3500);
-    const res = await fetch(`https://api.microlink.io?url=${encodeURIComponent(cleanUrl)}`, {
+    const timeoutId = setTimeout(() => controller.abort(), 4000);
+    const res = await fetch(microlinkEndpoint, {
       signal: controller.signal
     });
     clearTimeout(timeoutId);
@@ -839,8 +887,15 @@ export async function resolveSocialMetadata(rawUrl) {
           result.author = d.author.startsWith('@') ? d.author : `@${d.author}`;
         }
         if (d.image?.url && !isGarbageThumbnail(d.image.url)) {
-          result.thumbnail = d.image.url;
+          let thumbUrl = d.image.url;
+          // Proxy through weserv for CDN permanence and CORS protection
+          if (thumbUrl.includes('cdninstagram.com') || thumbUrl.includes('fbcdn.net')) {
+            result.thumbnail = `https://images.weserv.nl/?url=${encodeURIComponent(thumbUrl)}`;
+          } else {
+            result.thumbnail = thumbUrl;
+          }
         }
+        setCachedMetadata(cleanUrl, result);
         return result;
       }
     }
@@ -869,6 +924,7 @@ export async function resolveSocialMetadata(rawUrl) {
     // Fallback gracefully to smart reconstructed metadata and branded card
   }
 
+  setCachedMetadata(cleanUrl, result);
   return result;
 }
 

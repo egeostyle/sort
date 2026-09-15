@@ -208,26 +208,23 @@ class App {
   }
 
   bindEvents() {
-    // 1. URL input paste, input & change
+    // 1. URL input debounce & paste
+    let urlDebounceTimer = null;
     this.dom.urlInput.addEventListener('input', (e) => {
-      this.handleUrlInput(e.target.value);
+      clearTimeout(urlDebounceTimer);
+      urlDebounceTimer = setTimeout(() => {
+        this.handleUrlInput(e.target.value);
+      }, 350);
     });
 
     this.dom.urlInput.addEventListener('paste', (e) => {
+      clearTimeout(urlDebounceTimer);
       const clipboardText = e.clipboardData?.getData('text');
       if (clipboardText) {
         setTimeout(() => {
           this.handleUrlInput(clipboardText);
-        }, 20);
-      } else {
-        setTimeout(() => {
-          this.handleUrlInput(this.dom.urlInput.value);
-        }, 20);
+        }, 30);
       }
-    });
-
-    this.dom.urlInput.addEventListener('change', (e) => {
-      this.handleUrlInput(e.target.value);
     });
 
     if (this.dom.preCategorySelect) {
@@ -479,6 +476,22 @@ class App {
       });
     }
 
+    // Save Microlink Key
+    const btnSaveMicroKey = document.getElementById('btn-save-microlink-key');
+    if (btnSaveMicroKey) {
+      btnSaveMicroKey.addEventListener('click', () => {
+        const microKeyInput = document.getElementById('cfg-microlink-key');
+        const keyVal = (microKeyInput?.value || '').trim();
+        if (keyVal) {
+          localStorage.setItem('sorteitos_microlink_key', keyVal);
+          this.showToast('¡Clave de Microlink guardada exitosamente!');
+        } else {
+          localStorage.removeItem('sorteitos_microlink_key');
+          this.showToast('Clave removida. Usando cuota estándar gratuita.');
+        }
+      });
+    }
+
     // 12. Raffle Sender Filter Pills
     if (this.dom.raffleSenderFilterGroup) {
       const rPills = this.dom.raffleSenderFilterGroup.querySelectorAll('.sender-pill');
@@ -569,13 +582,14 @@ class App {
       : '<span class="sender-badge sender-badge-george"><i class="fa-solid fa-user" style="color:#00e5ff;"></i> George</span>';
 
     const fallbackSvg = data.fallbackSvg || generatePlaceholderSvg(platformConfig, data.title, data.author, data.mediaType, data.parsedId);
-    const thumbSrc = data.thumbnail || fallbackSvg;
+    let thumbSrc = data.thumbnail || fallbackSvg;
 
     this.dom.previewContainer.innerHTML = `
       <div class="preview-card">
         <div class="preview-thumbnail-box">
-          <img src="${thumbSrc}" class="preview-img" alt="Vista previa" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='${fallbackSvg}';" />
+          <img id="preview-img-elem" src="${thumbSrc}" class="preview-img" alt="Vista previa" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='${fallbackSvg}';" />
           <span class="preview-media-type-badge">${data.mediaType}</span>
+          <button type="button" id="btn-change-preview-thumb" class="btn-change-thumb" title="Cambiar foto o miniatura"><i class="fa-solid fa-camera"></i></button>
         </div>
         <div class="preview-content">
           <div>
@@ -605,6 +619,22 @@ class App {
         </div>
       </div>
     `;
+
+    // Bind change thumbnail button
+    const btnChangeThumb = document.getElementById('btn-change-preview-thumb');
+    if (btnChangeThumb) {
+      btnChangeThumb.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const initialVal = thumbSrc.startsWith('data:image/svg') ? '' : thumbSrc;
+        const newUrl = prompt('Pega el enlace de una foto o captura de este boleto (o deja vacío para cancelar):', initialVal);
+        if (newUrl && newUrl.trim()) {
+          thumbSrc = newUrl.trim();
+          const imgElem = document.getElementById('preview-img-elem');
+          if (imgElem) imgElem.src = thumbSrc;
+          data.thumbnail = thumbSrc;
+        }
+      });
+    }
 
     // Ensure selected category is synchronized
     const categorySelect = document.getElementById('preview-category-select');
@@ -1008,6 +1038,10 @@ class App {
     this.switchMobileTab(defaultTab);
     this.renderMobileShortcutsGuide();
     this.updateFirebaseStatusBanner();
+    const microKeyInput = document.getElementById('cfg-microlink-key');
+    if (microKeyInput) {
+      microKeyInput.value = localStorage.getItem('sorteitos_microlink_key') || '';
+    }
     this.dom.mobileConnectDialog.showModal();
   }
 
