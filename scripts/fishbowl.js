@@ -158,35 +158,71 @@ export class FishbowlController {
     }
   }
 
-  // Shaking raffle animation sequence
+  // Shaking raffle animation sequence with vortex and 3D card extraction
   async animateRaffle(winningTicket, category) {
-    sound.playShaking(2.4);
+    sound.playShaking(2.5);
 
-    // 1. Start intense shaking
-    this.fishbowlEl.classList.add('is-shaking');
-    const bubbleInterval = setInterval(() => this.burstBubbles(8), 180);
+    // Lock interactions on fishbowl
+    this.fishbowlEl.classList.add('is-locked', 'is-shaking');
+    if (this.fishbowlEl.parentElement) {
+      this.fishbowlEl.parentElement.classList.add('is-locked');
+    }
 
-    // Shake for 2.2 seconds
-    await new Promise(res => setTimeout(res, 2200));
+    const bubbleInterval = setInterval(() => {
+      this.burstBubbles(10);
+    }, 150);
+
+    // Shake & vortex for 2.4 seconds
+    await new Promise(res => setTimeout(res, 2400));
 
     clearInterval(bubbleInterval);
     this.fishbowlEl.classList.remove('is-shaking');
 
-    // 2. Launch ticket upward out of fishbowl
+    // 2. Launch 3D ticket upward out of fishbowl
     sound.playSplash();
     const stage = document.createElement('div');
     stage.className = 'launched-ticket-stage';
 
-    const launchedTicket = document.createElement('div');
-    launchedTicket.className = 'launched-ticket';
-    launchedTicket.style.backgroundColor = category.color || '#ffd166';
-    stage.appendChild(launchedTicket);
+    const backdrop = document.createElement('div');
+    backdrop.className = 'launched-ticket-backdrop';
+    stage.appendChild(backdrop);
+
+    const card = document.createElement('div');
+    card.className = 'launched-ticket-card';
+    const color = category.color || '#ffd166';
+    card.style.background = `linear-gradient(135deg, ${color} 0%, #102a50 100%)`;
+
+    const glimmer = document.createElement('div');
+    glimmer.className = 'launched-ticket-glimmer';
+    card.appendChild(glimmer);
+
+    const senderText = (winningTicket.sender || 'General');
+    card.innerHTML += `
+      <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em;">
+        <span style="display:flex; align-items:center; gap:4px; color:#ffd166;"><i class="fa-solid fa-star"></i> Sorteo</span>
+        <span style="opacity:0.9;">● ${category.name}</span>
+      </div>
+      <div style="font-size:0.95rem; font-weight:800; line-height:1.25; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; text-shadow:0 2px 4px rgba(0,0,0,0.6);">
+        ${winningTicket.title || 'Boleto Ganador'}
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.72rem; opacity:0.85;">
+        <span>Por: <strong>${senderText}</strong></span>
+        <span style="background:rgba(255,255,255,0.2); padding:2px 6px; border-radius:4px; font-weight:700;">#Ganador</span>
+      </div>
+    `;
+
+    stage.appendChild(card);
     document.body.appendChild(stage);
 
-    await new Promise(res => setTimeout(res, 1200));
+    await new Promise(res => setTimeout(res, 1800));
     stage.remove();
 
     // 3. Victory sound
     sound.playTada();
+
+    this.fishbowlEl.classList.remove('is-locked');
+    if (this.fishbowlEl.parentElement) {
+      this.fishbowlEl.parentElement.classList.remove('is-locked');
+    }
   }
 }

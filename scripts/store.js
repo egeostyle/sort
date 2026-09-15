@@ -4,7 +4,9 @@ const STORAGE_KEYS = {
   TICKETS: 'pecera_social_tickets_v1',
   CATEGORIES: 'pecera_social_categories_v1',
   SETTINGS: 'pecera_social_settings_v1',
-  ACTIVE_SENDER: 'pecera_social_active_sender_v1'
+  ACTIVE_SENDER: 'pecera_social_active_sender_v1',
+  DEVICE_SENDER: 'pecera_device_sender_v1',
+  THEME: 'pecera_social_theme_v1'
 };
 
 const DEFAULT_CATEGORIES = [
@@ -21,14 +23,18 @@ class Store {
     this.categories = this.loadCategories();
     this.tickets = this.loadTickets();
     this.settings = this.loadSettings();
-    this.activeSender = (typeof localStorage !== 'undefined' && localStorage.getItem(STORAGE_KEYS.ACTIVE_SENDER)) || 'George';
+    const savedDeviceSender = (typeof localStorage !== 'undefined' && (localStorage.getItem(STORAGE_KEYS.DEVICE_SENDER) || localStorage.getItem(STORAGE_KEYS.ACTIVE_SENDER)));
+    this.activeSender = savedDeviceSender || 'George';
     this.initCloudSync();
   }
 
-  setActiveSender(sender) {
+  setActiveSender(sender, isDeviceFixed = true) {
     this.activeSender = sender || 'George';
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem(STORAGE_KEYS.ACTIVE_SENDER, this.activeSender);
+      if (isDeviceFixed) {
+        localStorage.setItem(STORAGE_KEYS.DEVICE_SENDER, this.activeSender);
+      }
     }
     this.emit('SENDER_CHANGED', this.activeSender);
   }
@@ -173,13 +179,24 @@ class Store {
   }
 
   deleteCategory(categoryId) {
+    if (categoryId === 'cat-general') {
+      alert('La categoría General es fija y no se puede eliminar.');
+      return false;
+    }
+    const catToDelete = this.categories.find(c => c.id === categoryId);
+    if (catToDelete && catToDelete.name.trim().toLowerCase() === 'general') {
+      alert('La categoría General es fija y no se puede eliminar.');
+      return false;
+    }
+
     // Reassign tickets in deleted category to first available category
     const remaining = this.categories.filter(c => c.id !== categoryId);
     if (remaining.length === 0) {
       alert('Debe existir al menos una categoría.');
       return false;
     }
-    const fallbackId = remaining[0].id;
+    const fallbackCat = remaining.find(c => c.id === 'cat-general') || remaining[0];
+    const fallbackId = fallbackCat.id;
     this.tickets.forEach(ticket => {
       if (ticket.categoryId === categoryId) {
         ticket.categoryId = fallbackId;
@@ -263,6 +280,19 @@ class Store {
       return true;
     }
     return false;
+  }
+
+  updateTicketCategory(ticketId, newCategoryId) {
+    const ticket = this.tickets.find(t => t.id === ticketId);
+    if (!ticket) return false;
+    ticket.categoryId = newCategoryId;
+    this.saveTickets();
+    this.emit('TICKET_UPDATED', ticket);
+
+    if (firebaseSync.isConfigured()) {
+      firebaseSync.addTicket(ticket);
+    }
+    return true;
   }
 
   clearAllTickets() {

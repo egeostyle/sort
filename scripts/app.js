@@ -30,6 +30,7 @@ class App {
     this.fishbowlController = null;
     this.confetti = null;
     this.store = store;
+    this.isRaffling = false;
 
     this.dom = {
       // Input & Preview
@@ -46,6 +47,7 @@ class App {
       cloudStatusDot: document.getElementById('cloud-status-dot'),
       cloudStatusText: document.getElementById('cloud-status-text'),
       btnMobileConnect: document.getElementById('btn-mobile-connect'),
+      btnThemeToggle: document.getElementById('btn-theme-toggle'),
       btnCategories: document.getElementById('btn-categories'),
       counterPill: document.getElementById('counter-pill'),
       btnAudioToggle: document.getElementById('btn-audio-toggle'),
@@ -61,7 +63,9 @@ class App {
       raffleDialog: document.getElementById('raffle-dialog'),
       btnCloseRaffleModal: document.getElementById('btn-close-raffle-modal'),
       raffleSenderFilterGroup: document.getElementById('raffle-sender-filter-group'),
-      raffleCategoriesGrid: document.getElementById('raffle-categories-grid'),
+      raffleCategorySelect: document.getElementById('raffle-category-select'),
+      raffleSummaryCount: document.getElementById('raffle-summary-count'),
+      raffleSummaryText: document.getElementById('raffle-summary-text'),
       btnConfirmRaffle: document.getElementById('btn-confirm-raffle'),
 
       winnerDialog: document.getElementById('winner-dialog'),
@@ -108,6 +112,7 @@ class App {
     }
 
     this.bindEvents();
+    this.initTheme();
     this.renderCategoryPalettes();
     this.setupAmbientBubbles();
     this.updateSoundToggleState();
@@ -126,6 +131,25 @@ class App {
       const first = items[0];
       const senderText = first.sender ? `de ${first.sender}` : '';
       this.showToast(`¡Nuevo boleto sumergido en vivo ${senderText}!`);
+    });
+
+    // Reactive listener for ticket updates (categories modified, deleted, or added)
+    store.on('TICKETS_UPDATED', () => {
+      if (this.dom.raffleDialog && this.dom.raffleDialog.open) {
+        this.refreshRaffleCategoriesCount();
+      }
+      if (this.dom.ticketsListDialog && this.dom.ticketsListDialog.open) {
+        this.renderTicketsList(this.ticketsListSenderFilter);
+      }
+    });
+
+    store.on('TICKET_UPDATED', () => {
+      if (this.dom.raffleDialog && this.dom.raffleDialog.open) {
+        this.refreshRaffleCategoriesCount();
+      }
+      if (this.dom.ticketsListDialog && this.dom.ticketsListDialog.open) {
+        this.renderTicketsList(this.ticketsListSenderFilter);
+      }
     });
 
     // If categories updated (cloud sync or local modification)
@@ -184,6 +208,7 @@ class App {
 
     // 2. Fishbowl click -> Raffle prompt
     this.dom.fishbowl.addEventListener('click', () => {
+      if (this.isRaffling) return;
       sound.playBubble();
       this.openRafflePrompt();
     });
@@ -213,6 +238,27 @@ class App {
       this.dom.raffleDialog.close();
     });
 
+    if (this.dom.raffleCategorySelect) {
+      this.dom.raffleCategorySelect.addEventListener('change', (e) => {
+        sound.playBubble();
+        this.selectedRaffleCategory = e.target.value;
+        this.updateRaffleSummary();
+      });
+    }
+
+    if (this.dom.raffleSenderFilterGroup) {
+      const pills = this.dom.raffleSenderFilterGroup.querySelectorAll('.sender-pill');
+      pills.forEach(p => {
+        p.addEventListener('click', () => {
+          sound.playBubble();
+          pills.forEach(item => item.classList.remove('active'));
+          p.classList.add('active');
+          this.selectedRaffleSender = p.dataset.raffleSender;
+          this.refreshRaffleCategoriesCount();
+        });
+      });
+    }
+
     this.dom.btnConfirmRaffle.addEventListener('click', () => {
       this.executeRaffle();
     });
@@ -220,10 +266,12 @@ class App {
     // 6. Winner dialog
     this.dom.btnCloseWinnerModal.addEventListener('click', () => {
       this.dom.winnerDialog.close();
+      this.isRaffling = false;
     });
 
     this.dom.btnRaffleAgain.addEventListener('click', () => {
       this.dom.winnerDialog.close();
+      this.isRaffling = false;
       this.openRafflePrompt();
     });
 
@@ -291,9 +339,9 @@ class App {
         pill.addEventListener('click', () => {
           sound.playBubble();
           const sender = pill.dataset.sender;
-          store.setActiveSender(sender);
+          store.setActiveSender(sender, true);
           this.updateSenderPillSelection();
-          this.showToast(`Remitente activo: ${sender}`);
+          this.showToast(`✅ Dispositivo fijado para: ${sender}`);
         });
       });
     }
@@ -439,9 +487,11 @@ class App {
   renderPreviewCard(data) {
     const platformConfig = PLATFORMS[data.platform.toUpperCase()] || PLATFORMS.GENERIC;
     const categories = store.categories;
+    const defaultCat = categories.find(c => c.id === 'cat-general' || c.name.trim().toLowerCase() === 'general') || categories[0];
+    const defaultCatId = defaultCat ? defaultCat.id : (categories[0]?.id || '');
 
     const optionsHtml = categories.map(cat => 
-      `<option value="${cat.id}">${cat.name}</option>`
+      `<option value="${cat.id}" ${cat.id === defaultCatId ? 'selected' : ''}>${cat.name}</option>`
     ).join('');
 
     const activeSender = store.activeSender || 'George';
@@ -476,7 +526,7 @@ class App {
           <div class="preview-controls">
             <div class="category-select-wrapper">
               <label class="category-select-label">Categoría:</label>
-              <select id="preview-category-select" class="select-category">
+              <select id="preview-category-select" class="select-category" title="Selecciona una categoría (General por defecto)">
                 ${optionsHtml}
               </select>
             </div>
@@ -488,9 +538,14 @@ class App {
       </div>
     `;
 
+    // Ensure General is pre-selected
+    const categorySelect = document.getElementById('preview-category-select');
+    if (categorySelect && defaultCatId) {
+      categorySelect.value = defaultCatId;
+    }
+
     // Bind add button
     const btnAdd = document.getElementById('btn-add-to-bowl');
-    const categorySelect = document.getElementById('preview-category-select');
     const titleInput = document.getElementById('preview-title-input');
 
     btnAdd.addEventListener('click', () => {
@@ -529,47 +584,59 @@ class App {
 
   refreshRaffleCategoriesCount() {
     const sender = this.selectedRaffleSender || 'all';
-    const count = store.getTicketCount('all', sender);
+    const allCount = store.getTicketCount('all', sender);
     const categories = store.categories;
 
-    let html = `
-      <button class="raffle-choice-btn ${this.selectedRaffleCategory === 'all' ? 'active' : ''}" data-category="all">
-        <span class="raffle-btn-name"><i class="fa-solid fa-layer-group"></i> Todas</span>
-        <span class="raffle-btn-count">${count} boletos</span>
-      </button>
-    `;
+    if (this.dom.raffleCategorySelect) {
+      let options = `<option value="all" ${this.selectedRaffleCategory === 'all' ? 'selected' : ''}>🌟 Todas las categorías (${allCount} boletos)</option>`;
 
-    categories.forEach(cat => {
-      const catCount = store.getTicketCount(cat.id, sender);
-      html += `
-        <button class="raffle-choice-btn ${this.selectedRaffleCategory === cat.id ? 'active' : ''}" data-category="${cat.id}">
-          <span class="raffle-btn-name" style="color: ${cat.color};">● ${cat.name}</span>
-          <span class="raffle-btn-count">${catCount} boletos</span>
-        </button>
-      `;
-    });
-
-    this.dom.raffleCategoriesGrid.innerHTML = html;
-
-    const choiceButtons = this.dom.raffleCategoriesGrid.querySelectorAll('.raffle-choice-btn');
-    choiceButtons.forEach(btn => {
-      btn.addEventListener('click', () => {
-        sound.playBubble();
-        choiceButtons.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        this.selectedRaffleCategory = btn.dataset.category;
+      categories.forEach(cat => {
+        const catCount = store.getTicketCount(cat.id, sender);
+        options += `<option value="${cat.id}" ${this.selectedRaffleCategory === cat.id ? 'selected' : ''}>● ${cat.name} (${catCount} boletos)</option>`;
       });
-    });
+
+      this.dom.raffleCategorySelect.innerHTML = options;
+
+      // Validate selected category
+      if (this.selectedRaffleCategory !== 'all' && !categories.some(c => c.id === this.selectedRaffleCategory)) {
+        this.selectedRaffleCategory = 'all';
+        this.dom.raffleCategorySelect.value = 'all';
+      }
+    }
+
+    this.updateRaffleSummary();
+  }
+
+  updateRaffleSummary() {
+    if (!this.dom.raffleSummaryCount) return;
+    const sender = this.selectedRaffleSender || 'all';
+    const catId = this.selectedRaffleCategory || 'all';
+    const count = store.getTicketCount(catId, sender);
+    const catName = catId === 'all' ? 'Todas' : (store.getCategory(catId)?.name || 'Categoría');
+    const senderLabel = sender === 'all' ? 'Ambos' : sender;
+
+    this.dom.raffleSummaryCount.textContent = `${count} ${count === 1 ? 'boleto' : 'boletos'}`;
+    if (this.dom.raffleSummaryText) {
+      this.dom.raffleSummaryText.innerHTML = `<i class="fa-solid fa-circle-info" style="color:var(--accent-cyan); margin-right:4px;"></i> Boletos en juego (${catName} • ${senderLabel}):`;
+    }
   }
 
   async executeRaffle() {
+    if (this.isRaffling) return;
+
     const catId = this.selectedRaffleCategory;
     const sender = this.selectedRaffleSender;
     const poolCount = store.getTicketCount(catId, sender);
 
     if (poolCount === 0) {
-      alert('No hay boletos con los filtros seleccionados.');
+      alert('No hay boletos disponibles con los filtros seleccionados.');
       return;
+    }
+
+    this.isRaffling = true;
+    this.dom.fishbowl.classList.add('is-locked');
+    if (this.dom.fishbowl.parentElement) {
+      this.dom.fishbowl.parentElement.classList.add('is-locked');
     }
 
     this.dom.raffleDialog.close();
@@ -578,15 +645,23 @@ class App {
     this.currentWinner = winner;
     const category = store.getCategory(winner.categoryId);
 
-    // Run animation sequence
-    await this.fishbowlController.animateRaffle(winner, category);
+    try {
+      // Run animation sequence (vortex, agitation, 3D launched ticket)
+      await this.fishbowlController.animateRaffle(winner, category);
 
-    // Launch celebratory confetti
-    this.confetti.fire(120);
+      // Launch celebratory confetti
+      this.confetti.fire(120);
 
-    // Show winner card
-    this.renderWinnerCard(winner, category);
-    this.dom.winnerDialog.showModal();
+      // Show winner card
+      this.renderWinnerCard(winner, category);
+      this.dom.winnerDialog.showModal();
+    } finally {
+      this.isRaffling = false;
+      this.dom.fishbowl.classList.remove('is-locked');
+      if (this.dom.fishbowl.parentElement) {
+        this.dom.fishbowl.parentElement.classList.remove('is-locked');
+      }
+    }
   }
 
   renderWinnerCard(winner, category) {
@@ -655,6 +730,7 @@ class App {
     const categories = store.categories;
     this.dom.categoryList.innerHTML = categories.map(cat => {
       const count = store.getTicketCount(cat.id);
+      const isFixedGeneral = cat.id === 'cat-general' || cat.name.trim().toLowerCase() === 'general';
       return `
         <div class="category-row">
           <div class="category-info">
@@ -663,11 +739,15 @@ class App {
           </div>
           <div style="display:flex; align-items:center; gap: 0.6rem;">
             <span class="category-count">${count} tickets</span>
-            ${categories.length > 1 ? `
+            ${isFixedGeneral ? `
+              <span class="category-fixed-badge" style="font-size:0.72rem; color:var(--text-dim); background:rgba(255,255,255,0.06); padding:0.25rem 0.55rem; border-radius:var(--radius-sm); display:flex; align-items:center; gap:4px;" title="Categoría base predeterminada (fija)">
+                <i class="fa-solid fa-lock" style="font-size:0.65rem;"></i> Fija
+              </span>
+            ` : (categories.length > 1 ? `
               <button class="btn-delete-category" data-id="${cat.id}" title="Eliminar categoría" aria-label="Eliminar categoría">
                 <i class="fa-solid fa-trash-can"></i>
               </button>
-            ` : ''}
+            ` : '')}
           </div>
         </div>
       `;
@@ -677,7 +757,11 @@ class App {
     this.dom.categoryList.querySelectorAll('.btn-delete-category').forEach(btn => {
       btn.addEventListener('click', () => {
         const id = btn.dataset.id;
-        if (confirm('¿Deseas eliminar esta categoría? Sus boletos pasarán a la categoría principal.')) {
+        if (id === 'cat-general') {
+          alert('La categoría General es fija y no se puede eliminar.');
+          return;
+        }
+        if (confirm('¿Deseas eliminar esta categoría? Sus boletos pasarán a la categoría General.')) {
           store.deleteCategory(id);
           this.renderCategoryList();
           this.showToast('Categoría eliminada.');
@@ -752,7 +836,14 @@ class App {
               ${t.title}
             </div>
             <div style="font-size:0.72rem; color: var(--text-muted); display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap; margin-top:2px;">
-              <span style="color: ${cat.color}; font-weight:600;">● ${cat.name}</span>
+              <label class="ticket-cat-editor" title="Toca para cambiar la categoría de este boleto">
+                <select class="ticket-cat-select" data-ticket-id="${t.id}" style="color: ${cat.color};">
+                  ${store.categories.map(c => `
+                    <option value="${c.id}" ${c.id === t.categoryId ? 'selected' : ''}>● ${c.name}</option>
+                  `).join('')}
+                </select>
+                <i class="fa-solid fa-chevron-down" style="font-size:0.55rem; color:${cat.color}; opacity:0.75;"></i>
+              </label>
               <span>•</span>
               <span>${plat.name}</span>
               <span>•</span>
@@ -768,6 +859,19 @@ class App {
         </div>
       `;
     }).join('');
+
+    // Bind category changer dropdowns
+    this.dom.allTicketsContainer.querySelectorAll('.ticket-cat-select').forEach(select => {
+      select.addEventListener('change', () => {
+        const ticketId = select.dataset.ticketId;
+        const newCatId = select.value;
+        store.updateTicketCategory(ticketId, newCatId);
+        sound.playBubble();
+        const newCat = store.getCategory(newCatId);
+        this.showToast(`Boleto reasignado a "${newCat.name}"`);
+        this.renderTicketsList(senderFilter);
+      });
+    });
 
     this.dom.allTicketsContainer.querySelectorAll('.btn-del-tkt').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -965,6 +1069,42 @@ class App {
       bubble.style.animationDelay = `${delay}s`;
 
       ambient.appendChild(bubble);
+    }
+  }
+
+  initTheme() {
+    let savedTheme = 'dark';
+    try {
+      savedTheme = localStorage.getItem('pecera_social_theme_v1') || 'dark';
+    } catch (e) {}
+
+    this.applyTheme(savedTheme);
+
+    if (this.dom.btnThemeToggle) {
+      this.dom.btnThemeToggle.addEventListener('click', () => {
+        sound.playBubble();
+        const current = document.documentElement.getAttribute('data-theme') || 'dark';
+        const next = current === 'clear' ? 'dark' : 'clear';
+        this.applyTheme(next);
+        this.showToast(next === 'clear' ? '☀️ Diseño Claro / Cristal Limpio activado' : '🌙 Diseño Océano Nocturno activado');
+      });
+    }
+  }
+
+  applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    try {
+      localStorage.setItem('pecera_social_theme_v1', theme);
+    } catch (e) {}
+
+    if (this.dom.btnThemeToggle) {
+      const icon = this.dom.btnThemeToggle.querySelector('i');
+      if (icon) {
+        icon.className = theme === 'clear' ? 'fa-solid fa-moon' : 'fa-solid fa-sun';
+      }
+      const titleText = theme === 'clear' ? 'Cambiar a diseño oscuro (Océano)' : 'Cambiar a diseño claro (Cristal Limpio)';
+      this.dom.btnThemeToggle.title = titleText;
+      this.dom.btnThemeToggle.setAttribute('aria-label', titleText);
     }
   }
 

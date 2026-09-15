@@ -290,62 +290,174 @@
    Animations: Shaking & Ticket Extraction
    ========================================================================== */
 
+/* ==========================================================================
+   Animations: Shaking, Vortex & Ticket Extraction
+   ========================================================================== */
+
+.fishbowl.is-locked {
+  pointer-events: none !important;
+  cursor: default !important;
+}
+
+.fishbowl-stage.is-locked .fishbowl-cta-hint {
+  opacity: 0;
+  transform: translateX(-50%) translateY(10px);
+  pointer-events: none;
+}
+
 .fishbowl.is-shaking {
-  animation: fishbowlShake 0.12s ease-in-out infinite alternate;
+  animation: fishbowlShake 0.1s cubic-bezier(0.36, 0.07, 0.19, 0.97) infinite alternate;
+  box-shadow: 0 0 60px rgba(0, 229, 255, 0.45), inset 0 0 40px rgba(0, 229, 255, 0.3);
+}
+
+.fishbowl.is-shaking .water-layer {
+  animation: waterVortexPulse 0.35s ease-in-out infinite alternate;
 }
 
 .fishbowl.is-shaking .animated-water-meniscus {
-  animation: violentWaves 0.1s linear infinite alternate;
+  animation: violentWaves 0.08s linear infinite alternate;
+}
+
+.fishbowl.is-shaking .water-ticket {
+  animation: ticketWhirlpool 0.55s cubic-bezier(0.4, 0, 0.2, 1) infinite !important;
 }
 
 @keyframes fishbowlShake {
-  0% { transform: translate(-6px, 2px) rotate(-2.5deg); }
-  50% { transform: translate(6px, -2px) rotate(2.5deg); }
-  100% { transform: translate(-4px, -1px) rotate(-1.5deg); }
+  0% { transform: translate(-7px, 3px) rotate(-3deg); }
+  25% { transform: translate(6px, -4px) rotate(2.5deg); }
+  50% { transform: translate(-5px, -2px) rotate(-2deg); }
+  75% { transform: translate(7px, 4px) rotate(3deg); }
+  100% { transform: translate(-4px, 1px) rotate(-1deg); }
+}
+
+@keyframes waterVortexPulse {
+  0% { filter: brightness(1) drop-shadow(0 0 10px rgba(0, 229, 255, 0.4)); }
+  100% { filter: brightness(1.35) drop-shadow(0 0 35px rgba(0, 229, 255, 0.85)); }
+}
+
+@keyframes ticketWhirlpool {
+  0% {
+    transform: rotate(0deg) translate(26px) rotate(0deg) scale(0.9);
+  }
+  50% {
+    transform: rotate(180deg) translate(36px) rotate(-180deg) scale(1.1);
+  }
+  100% {
+    transform: rotate(360deg) translate(26px) rotate(-360deg) scale(0.9);
+  }
 }
 
 @keyframes violentWaves {
-  0% { transform: scaleX(1.08) translateY(-4px) rotate(3deg); }
-  100% { transform: scaleX(0.92) translateY(5px) rotate(-3deg); }
+  0% { transform: scaleX(1.1) translateY(-6px) rotate(3.5deg); }
+  100% { transform: scaleX(0.9) translateY(6px) rotate(-3.5deg); }
 }
 
-/* Ticket launched animation */
+/* Enhanced 3D Ticket Extraction & Deployment Animation */
 .launched-ticket-stage {
   position: fixed;
   inset: 0;
-  z-index: 1000;
+  z-index: 9999;
   pointer-events: none;
   display: flex;
   align-items: center;
   justify-content: center;
+  perspective: 1200px;
 }
 
-.launched-ticket {
+.launched-ticket-backdrop {
   position: absolute;
-  width: 96px;
-  height: 60px;
-  border-radius: 8px;
-  border: 2.5px solid #fff;
-  box-shadow: 0 0 40px var(--gold-glow), 0 12px 30px rgba(0, 0, 0, 0.6);
-  animation: launchAndAscend 1.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(0, 229, 255, 0.25) 0%, transparent 70%);
+  animation: backdropPulse 1.8s ease-out forwards;
 }
 
-@keyframes launchAndAscend {
+.launched-ticket-card {
+  position: relative;
+  width: 220px;
+  height: 130px;
+  border-radius: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.95);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 14px 18px;
+  color: #fff;
+  font-family: var(--font-sans);
+  box-shadow: 
+    0 0 60px rgba(255, 209, 102, 0.8),
+    0 25px 50px rgba(0, 0, 0, 0.8),
+    inset 0 1px 3px rgba(255, 255, 255, 0.9);
+  animation: launchAndUnfold 1.85s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+  transform-style: preserve-3d;
+  overflow: hidden;
+}
+
+.launched-ticket-card::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: rgba(5, 14, 30, 0.95);
+}
+
+.launched-ticket-card::after {
+  content: '';
+  position: absolute;
+  right: -8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: rgba(5, 14, 30, 0.95);
+}
+
+.launched-ticket-glimmer {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 20%, rgba(255, 255, 255, 0.6) 50%, transparent 80%);
+  animation: glimmerSweep 1.8s ease-in-out forwards;
+  pointer-events: none;
+}
+
+@keyframes launchAndUnfold {
   0% {
-    transform: translateY(90px) scale(0.4) rotate(0deg);
+    transform: translateY(200px) scale(0.15) rotateX(60deg) rotateZ(-20deg);
     opacity: 0;
+    filter: blur(8px);
   }
-  30% {
+  20% {
     opacity: 1;
-    transform: translateY(-80px) scale(1.1) rotate(180deg);
+    transform: translateY(-10px) scale(0.95) rotateX(15deg) rotateZ(6deg);
+    filter: blur(0px);
   }
-  70% {
-    transform: translateY(-140px) scale(1.4) rotate(360deg);
+  60% {
+    transform: translateY(-50px) scale(1.25) rotateX(0deg) rotateZ(-2deg);
+  }
+  85% {
+    transform: translateY(-35px) scale(1.4) rotateX(0deg) rotateZ(0deg);
+    opacity: 1;
   }
   100% {
-    transform: translateY(-70px) scale(1.85) rotate(720deg);
+    transform: translateY(-25px) scale(1.65) rotateX(0deg) rotateZ(0deg);
     opacity: 0;
   }
+}
+
+@keyframes glimmerSweep {
+  0% { transform: translateX(-120%); }
+  50% { transform: translateX(120%); }
+  100% { transform: translateX(120%); }
+}
+
+@keyframes backdropPulse {
+  0% { opacity: 0; transform: scale(0.5); }
+  35% { opacity: 1; transform: scale(1.1); }
+  100% { opacity: 0; transform: scale(1.5); }
 }
 
 @media (max-width: 640px) {
