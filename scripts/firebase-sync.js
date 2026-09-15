@@ -20,7 +20,10 @@ export class FirebaseSync {
   constructor() {
     this.app = null;
     this.db = null;
-    this.unsubscribeSnapshot = null;
+    this.unsubscribeTickets = null;
+    this.unsubscribeCategories = null;
+    this.onTicketsSync = null;
+    this.onCategoriesSync = null;
     this.status = 'unconfigured'; // 'unconfigured' | 'connecting' | 'connected' | 'error'
     this.statusMessage = 'Modo Local (localStorage activo)';
     this.listeners = new Set();
@@ -83,9 +86,12 @@ export class FirebaseSync {
     });
   }
 
-  async init(onTicketsSyncCallback = null) {
+  async init(onTicketsSyncCallback = null, onCategoriesSyncCallback = null) {
     if (onTicketsSyncCallback) {
       this.onTicketsSync = onTicketsSyncCallback;
+    }
+    if (onCategoriesSyncCallback) {
+      this.onCategoriesSync = onCategoriesSyncCallback;
     }
 
     if (!this.isConfigured()) {
@@ -116,7 +122,8 @@ export class FirebaseSync {
       this.app = existingApps.length > 0 ? existingApps[0] : initializeApp(this.config);
       this.db = getFirestore(this.app);
 
-      this.setupRealtimeListener(collection, query, orderBy, limit, onSnapshot);
+      this.setupTicketsListener(collection, query, orderBy, limit, onSnapshot);
+      this.setupCategoriesListener(collection, onSnapshot);
       this.notifyStatus('connected', `Conectado a Firebase (${this.config.projectId})`);
       return true;
     } catch (err) {
@@ -126,10 +133,10 @@ export class FirebaseSync {
     }
   }
 
-  setupRealtimeListener(collection, query, orderBy, limit, onSnapshot) {
-    if (this.unsubscribeSnapshot) {
-      this.unsubscribeSnapshot();
-      this.unsubscribeSnapshot = null;
+  setupTicketsListener(collection, query, orderBy, limit, onSnapshot) {
+    if (this.unsubscribeTickets) {
+      this.unsubscribeTickets();
+      this.unsubscribeTickets = null;
     }
 
     try {
@@ -137,7 +144,7 @@ export class FirebaseSync {
       // Listen to recent 200 tickets
       const q = query(ticketsCol, orderBy('createdAt', 'desc'), limit(200));
 
-      this.unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
+      this.unsubscribeTickets = onSnapshot(q, (snapshot) => {
         const cloudTickets = [];
         snapshot.forEach((docSnap) => {
           const data = docSnap.data();
@@ -159,11 +166,47 @@ export class FirebaseSync {
           this.onTicketsSync(cloudTickets);
         }
       }, (err) => {
-        console.warn('Firestore snapshot error:', err);
-        this.notifyStatus('error', `Error en tiempo real: ${err.message}`);
+        console.warn('Firestore tickets snapshot error:', err);
+        this.notifyStatus('error', `Error en tiempo real (tickets): ${err.message}`);
       });
     } catch (e) {
-      console.error('Failed to setup Firestore listener:', e);
+      console.error('Failed to setup tickets listener:', e);
+    }
+  }
+
+  setupCategoriesListener(collection, onSnapshot) {
+    if (this.unsubscribeCategories) {
+      this.unsubscribeCategories();
+      this.unsubscribeCategories = null;
+    }
+
+    try {
+      const categoriesCol = collection(this.db, 'categories');
+
+      this.unsubscribeCategories = onSnapshot(categoriesCol, (snapshot) => {
+        const cloudCategories = [];
+        snapshot.forEach((docSnap) => {
+          const data = docSnap.data();
+          cloudCategories.push({
+            id: docSnap.id,
+            name: data.name || 'Categoría',
+            color: data.color || '#00e5ff',
+            order: typeof data.order === 'number' ? data.order : 999,
+            createdAt: data.createdAt || ''
+          });
+        });
+
+        // Sort by order ascending, then by createdAt
+        cloudCategories.sort((a, b) => (a.order - b.order) || (a.createdAt > b.createdAt ? 1 : -1));
+
+        if (this.onCategoriesSync) {
+          this.onCategoriesSync(cloudCategories);
+        }
+      }, (err) => {
+        console.warn('Firestore categories snapshot error:', err);
+      });
+    } catch (e) {
+      console.error('Failed to setup categories listener:', e);
     }
   }
 
@@ -202,10 +245,44 @@ export class FirebaseSync {
     }
   }
 
+  async addCategory(category, order = 999) {
+    if (!this.db || !this.firestoreOps) return false;
+    try {
+      const { doc, setDoc } = this.firestoreOps;
+      const catRef = doc(this.db, 'categories', category.id);
+      await setDoc(catRef, {
+        name: category.name,
+        color: category.color || '#00e5ff',
+        order: typeof category.order === 'number' ? category.order : order,
+        createdAt: category.createdAt || new Date().toISOString()
+      });
+      return true;
+    } catch (e) {
+      console.error('Failed to add category to Firestore:', e);
+      return false;
+    }
+  }
+
+  async deleteCategory(categoryId) {
+    if (!this.db || !this.firestoreOps) return false;
+    try {
+      const { doc, deleteDoc } = this.firestoreOps;
+      await deleteDoc(doc(this.db, 'categories', categoryId));
+      return true;
+    } catch (e) {
+      console.error('Failed to delete category from Firestore:', e);
+      return false;
+    }
+  }
+
   disconnect() {
-    if (this.unsubscribeSnapshot) {
-      this.unsubscribeSnapshot();
-      this.unsubscribeSnapshot = null;
+    if (this.unsubscribeTickets) {
+      this.unsubscribeTickets();
+      this.unsubscribeTickets = null;
+    }
+    if (this.unsubscribeCategories) {
+      this.unsubscribeCategories();
+      this.unsubscribeCategories = null;
     }
     this.notifyStatus('unconfigured', 'Modo Local (localStorage activo)');
   }

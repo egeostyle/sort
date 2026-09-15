@@ -34,9 +34,48 @@ class Store {
   }
 
   initCloudSync() {
-    firebaseSync.init((cloudTickets) => {
-      this.handleCloudTickets(cloudTickets);
-    });
+    firebaseSync.init(
+      (cloudTickets) => {
+        this.handleCloudTickets(cloudTickets);
+      },
+      (cloudCategories) => {
+        this.handleCloudCategories(cloudCategories);
+      }
+    );
+  }
+
+  handleCloudCategories(cloudCategories) {
+    if (!Array.isArray(cloudCategories)) return;
+
+    // If Firestore has NO categories at all yet, seed them from current local store
+    if (cloudCategories.length === 0 && this.categories.length > 0) {
+      if (firebaseSync.isConfigured()) {
+        console.log('🌱 Inicializando categorías base en Firestore...');
+        this.categories.forEach((cat, idx) => {
+          firebaseSync.addCategory({ ...cat, order: idx });
+        });
+      }
+      return;
+    }
+
+    if (cloudCategories.length > 0) {
+      // Check if different from current local categories to avoid unnecessary re-renders
+      const currentJson = JSON.stringify(this.categories);
+      const newJson = JSON.stringify(cloudCategories);
+      if (currentJson !== newJson) {
+        this.categories = cloudCategories;
+        this.saveLocalCategoriesOnly();
+        this.emit('CATEGORIES_UPDATED', this.categories);
+      }
+    }
+  }
+
+  saveLocalCategoriesOnly() {
+    try {
+      localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(this.categories));
+    } catch (err) {
+      console.error('Failed to save categories locally:', err);
+    }
   }
 
   handleCloudTickets(cloudTickets) {
@@ -108,11 +147,7 @@ class Store {
   }
 
   saveCategories() {
-    try {
-      localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(this.categories));
-    } catch (err) {
-      console.error('Failed to save categories:', err);
-    }
+    this.saveLocalCategoriesOnly();
     this.emit('CATEGORIES_UPDATED', this.categories);
   }
 
@@ -122,11 +157,18 @@ class Store {
     const newCat = {
       id: 'cat-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
       name: trimmed,
-      color: color || '#00e5ff'
+      color: color || '#00e5ff',
+      order: this.categories.length,
+      createdAt: new Date().toISOString()
     };
     this.categories.push(newCat);
     this.saveCategories();
     this.emit('CATEGORY_ADDED', newCat);
+
+    if (firebaseSync.isConfigured()) {
+      firebaseSync.addCategory(newCat, this.categories.length);
+    }
+
     return newCat;
   }
 
@@ -148,6 +190,10 @@ class Store {
     this.categories = remaining;
     this.saveCategories();
     this.emit('CATEGORY_DELETED', categoryId);
+
+    if (firebaseSync.isConfigured()) {
+      firebaseSync.deleteCategory(categoryId);
+    }
     return true;
   }
 
@@ -305,10 +351,18 @@ class Store {
       if (Array.isArray(data.categories)) {
         this.categories = data.categories;
         this.saveCategories();
+        if (firebaseSync.isConfigured()) {
+          this.categories.forEach((cat, idx) => {
+            firebaseSync.addCategory({ ...cat, order: idx });
+          });
+        }
       }
       if (Array.isArray(data.tickets)) {
         this.tickets = data.tickets;
         this.saveTickets();
+        if (firebaseSync.isConfigured()) {
+          this.tickets.forEach(t => firebaseSync.addTicket(t));
+        }
       }
       return true;
     } catch (e) {

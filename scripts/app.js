@@ -47,7 +47,6 @@ class App {
       cloudStatusText: document.getElementById('cloud-status-text'),
       btnMobileConnect: document.getElementById('btn-mobile-connect'),
       btnCategories: document.getElementById('btn-categories'),
-      btnAddCategoryQuick: document.getElementById('btn-add-category-quick'),
       counterPill: document.getElementById('counter-pill'),
       btnAudioToggle: document.getElementById('btn-audio-toggle'),
       
@@ -129,6 +128,28 @@ class App {
       this.showToast(`¡Nuevo boleto sumergido en vivo ${senderText}!`);
     });
 
+    // If categories updated (cloud sync or local modification)
+    store.on('CATEGORIES_UPDATED', (categories) => {
+      this.renderCategoryPalettes();
+      if (this.dom.categoryDialog && this.dom.categoryDialog.open) {
+        this.renderCategoryList();
+      }
+      if (this.dom.raffleDialog && this.dom.raffleDialog.open) {
+        this.refreshRaffleCategoriesCount();
+      }
+      if (this.dom.ticketsListDialog && this.dom.ticketsListDialog.open) {
+        this.renderTicketsList(this.ticketsListSenderFilter);
+      }
+      const catSelect = document.getElementById('preview-category-select');
+      if (catSelect && Array.isArray(categories)) {
+        const currentVal = catSelect.value;
+        catSelect.innerHTML = categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+        if (categories.some(c => c.id === currentVal)) {
+          catSelect.value = currentVal;
+        }
+      }
+    });
+
     // If user presses enter on input
     this.dom.urlInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
@@ -171,12 +192,6 @@ class App {
     this.dom.btnCategories.addEventListener('click', () => {
       sound.playBubble();
       this.openCategoryModal();
-    });
-
-    this.dom.btnAddCategoryQuick.addEventListener('click', () => {
-      sound.playBubble();
-      this.openCategoryModal();
-      this.dom.newCatNameInput.focus();
     });
 
     this.dom.btnCloseCategoryModal.addEventListener('click', () => {
