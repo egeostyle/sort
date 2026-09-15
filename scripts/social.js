@@ -784,6 +784,20 @@ function setCachedMetadata(url, data) {
   } catch (e) {}
 }
 
+export const DEFAULT_WORKER_URL = 'https://sorteos-preview.geoestereo.workers.dev/';
+
+function decodeHtmlEntities(str) {
+  if (!str) return '';
+  return str
+    .replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+    .replace(/&#([0-9]+);/g, (_, dec) => String.fromCharCode(parseInt(dec, 10)))
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>');
+}
+
 /**
  * Resolves metadata using cascading strategies:
  * 1. Local memory/localStorage cache (instant, 0 network)
@@ -857,7 +871,47 @@ export async function resolveSocialMetadata(rawUrl) {
     }
   }
 
-  // Strategy C: Microlink API (OpenGraph extraction with optional user API key)
+  // Strategy C: Cloudflare Worker (Primary dedicated scraper with 100,000 free requests/day)
+  try {
+    let workerBase = DEFAULT_WORKER_URL;
+    try {
+      workerBase = localStorage.getItem('sorteitos_worker_url') || DEFAULT_WORKER_URL;
+    } catch (e) {}
+
+    if (workerBase && workerBase.trim()) {
+      const workerUrl = `${workerBase.trim().replace(/\/$/, '')}/?url=${encodeURIComponent(cleanUrl)}`;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 4500);
+      const res = await fetch(workerUrl, { signal: controller.signal });
+      clearTimeout(timeoutId);
+
+      if (res.ok) {
+        const json = await res.json();
+        if (json && json.status === 'success') {
+          if (json.title && !isGarbageTitle(json.title, parsedId)) {
+            result.title = decodeHtmlEntities(json.title);
+          }
+          if (json.author && !isGarbageTitle(json.author, parsedId)) {
+            result.author = decodeHtmlEntities(json.author);
+          }
+          if (json.image && !isGarbageThumbnail(json.image)) {
+            let thumb = json.image;
+            if (thumb.includes('cdninstagram.com') || thumb.includes('fbcdn.net')) {
+              result.thumbnail = `https://images.weserv.nl/?url=${encodeURIComponent(thumb)}`;
+            } else {
+              result.thumbnail = thumb;
+            }
+            setCachedMetadata(cleanUrl, result);
+            return result;
+          }
+        }
+      }
+    }
+  } catch (e) {
+    // Continue to Microlink fallback
+  }
+
+  // Strategy D: Microlink API (Secondary fallback with optional user API key)
   try {
     let userApiKey = '';
     try {
