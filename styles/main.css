@@ -137,6 +137,14 @@
   border-color: #e91e63;
 }
 
+[data-theme="clear"] .sender-selector-row {
+  border-top-color: rgba(14, 45, 88, 0.1);
+}
+
+[data-theme="clear"] .sender-selector-label {
+  color: #5b7692;
+}
+
 [data-theme="clear"] .btn-glass {
   background: rgba(14, 45, 88, 0.06);
   color: #0c2340;

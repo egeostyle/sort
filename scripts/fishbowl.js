@@ -67,37 +67,37 @@ export class FishbowlController {
     el.title = `${ticket.title} (${category.name})`;
 
     const color = category.color || '#00e5ff';
-    el.style.background = `linear-gradient(135deg, ${color}ee 0%, ${color}aa 100%)`;
-    el.style.borderColor = 'rgba(255, 255, 255, 0.75)';
+    el.style.background = `linear-gradient(135deg, ${color}f2 0%, ${color}c0 100%)`;
+    el.style.borderColor = 'rgba(255, 255, 255, 0.9)';
 
     // Golden-ratio harmonic distribution inside the submerged water volume
     const goldenAngle = 137.508 * (Math.PI / 180);
     const angle = index * goldenAngle;
     const spreadProgress = (index % 7) / 6;
-    const radiusX = 15 + (spreadProgress * 25);
-    const radiusY = 12 + (((index % 5) / 4) * 22);
+    const radiusX = 8 + (spreadProgress * 20);
+    const radiusY = 7 + (((index % 5) / 4) * 16);
 
     const posX = 50 + (Math.cos(angle) * radiusX);
-    const posY = 52 + (Math.sin(angle) * radiusY);
+    const posY = 54 + (Math.sin(angle) * radiusY);
 
-    const rot = -24 + ((index * 33) % 48);
-    const scale = 0.90 + ((index % 4) * 0.06);
-    const opacity = 0.88 + ((index % 3) * 0.06);
+    const rot = -20 + ((index * 29) % 40);
+    const scale = 0.88 + ((index % 4) * 0.05);
+    const opacity = 0.92 + ((index % 3) * 0.04);
 
-    // Keep completely submerged inside water layer (avoiding surface meniscus)
-    el.style.left = `${Math.max(12, Math.min(84, posX))}%`;
-    el.style.top = `${Math.max(22, Math.min(78, posY))}%`;
+    // Keep completely submerged safely inside water belly
+    el.style.left = `${Math.max(22, Math.min(78, posX))}%`;
+    el.style.top = `${Math.max(28, Math.min(74, posY))}%`;
     el.style.opacity = opacity.toFixed(2);
     el.style.zIndex = Math.floor(scale * 10);
     el.style.setProperty('--rot', `${rot}deg`);
     el.style.setProperty('--scale', scale.toFixed(2));
-    el.style.setProperty('--tx', `${(index % 3 - 1) * 6}px`);
-    el.style.setProperty('--ty', `${(index % 2 === 0 ? -6 : 6)}px`);
+    el.style.setProperty('--tx', `${(index % 3 - 1) * 4}px`);
+    el.style.setProperty('--ty', `${(index % 2 === 0 ? -4 : 4)}px`);
     el.style.animationDelay = `${(index * 0.35) % 3.5}s`;
     el.style.animationDuration = `${4 + ((index % 3) * 0.5)}s`;
 
-    // High aesthetic ticket label with star badge
-    el.innerHTML = `<span class="ticket-number-label"><span class="ticket-star">★</span>#${total - index}</span>`;
+    // Sleek mini ticket stub without bulky numbers or star icons
+    el.innerHTML = '<span class="ticket-mini-perforation"></span>';
 
     return el;
   }

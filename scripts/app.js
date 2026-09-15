@@ -4,7 +4,7 @@
  */
 
 import { store } from './store.js';
-import { PLATFORMS, resolveSocialMetadata, generatePlaceholderSvg, getValidThumbnail } from './social.js';
+import { PLATFORMS, resolveSocialMetadata, generatePlaceholderSvg, getValidThumbnail, extractAndCleanUrl } from './social.js';
 import { FishbowlController } from './fishbowl.js';
 import { ConfettiCannon } from './confetti.js';
 import { sound } from './sound.js';
@@ -38,6 +38,7 @@ class App {
       btnPaste: document.getElementById('btn-paste'),
       previewContainer: document.getElementById('preview-container'),
       senderPillsGroup: document.getElementById('sender-pills-group'),
+      preCategorySelect: document.getElementById('pre-category-select'),
       
       // Fishbowl
       fishbowl: document.getElementById('fishbowl'),
@@ -155,6 +156,7 @@ class App {
     // If categories updated (cloud sync or local modification)
     store.on('CATEGORIES_UPDATED', (categories) => {
       this.renderCategoryPalettes();
+      this.refreshPreCategorySelect();
       if (this.dom.categoryDialog && this.dom.categoryDialog.open) {
         this.renderCategoryList();
       }
@@ -167,12 +169,14 @@ class App {
       const catSelect = document.getElementById('preview-category-select');
       if (catSelect && Array.isArray(categories)) {
         const currentVal = catSelect.value;
-        catSelect.innerHTML = categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+        catSelect.innerHTML = categories.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
         if (categories.some(c => c.id === currentVal)) {
           catSelect.value = currentVal;
         }
       }
     });
+
+    this.refreshPreCategorySelect();
 
     // If user presses enter on input
     this.dom.urlInput.addEventListener('keydown', (e) => {
@@ -182,22 +186,69 @@ class App {
       }
     });
 
-    console.log('🐟 Pecera Social inicializada con éxito.');
+    console.log('🐟 Sorteitos inicializado con éxito.');
+  }
+
+  refreshPreCategorySelect() {
+    if (!this.dom.preCategorySelect) return;
+    const categories = store.categories;
+    const currentVal = this.dom.preCategorySelect.value;
+    const defaultCat = categories.find(c => c.id === 'cat-general' || c.name.trim().toLowerCase() === 'general') || categories[0];
+    const defaultCatId = defaultCat ? defaultCat.id : (categories[0]?.id || '');
+
+    this.dom.preCategorySelect.innerHTML = categories.map(cat =>
+      `<option value="${cat.id}">${escapeHtml(cat.name)}</option>`
+    ).join('');
+
+    if (currentVal && categories.some(c => c.id === currentVal)) {
+      this.dom.preCategorySelect.value = currentVal;
+    } else if (defaultCatId) {
+      this.dom.preCategorySelect.value = defaultCatId;
+    }
   }
 
   bindEvents() {
-    // 1. URL input paste & input
+    // 1. URL input paste, input & change
     this.dom.urlInput.addEventListener('input', (e) => {
       this.handleUrlInput(e.target.value);
     });
+
+    this.dom.urlInput.addEventListener('paste', (e) => {
+      const clipboardText = e.clipboardData?.getData('text');
+      if (clipboardText) {
+        setTimeout(() => {
+          this.handleUrlInput(clipboardText);
+        }, 20);
+      } else {
+        setTimeout(() => {
+          this.handleUrlInput(this.dom.urlInput.value);
+        }, 20);
+      }
+    });
+
+    this.dom.urlInput.addEventListener('change', (e) => {
+      this.handleUrlInput(e.target.value);
+    });
+
+    if (this.dom.preCategorySelect) {
+      this.dom.preCategorySelect.addEventListener('change', () => {
+        const previewCatSelect = document.getElementById('preview-category-select');
+        if (previewCatSelect) {
+          previewCatSelect.value = this.dom.preCategorySelect.value;
+        }
+      });
+    }
 
     this.dom.btnPaste.addEventListener('click', async () => {
       sound.playBubble();
       try {
         if (navigator.clipboard && navigator.clipboard.readText) {
           const text = await navigator.clipboard.readText();
-          this.dom.urlInput.value = text;
-          this.handleUrlInput(text);
+          if (text) {
+            this.handleUrlInput(text);
+          } else {
+            this.dom.urlInput.focus();
+          }
         } else {
           this.dom.urlInput.focus();
         }
@@ -457,12 +508,29 @@ class App {
     }
   }
 
-  // Handle URL parsing and preview display
+  // Handle URL parsing, cleaning and preview display
   async handleUrlInput(rawText) {
-    const text = rawText.trim();
-    if (!text || !text.startsWith('http')) {
+    if (!rawText || !rawText.trim()) {
       this.dom.previewContainer.innerHTML = '';
       this.currentPreviewData = null;
+      return;
+    }
+
+    const extraction = extractAndCleanUrl(rawText);
+    if (!extraction || !extraction.cleanUrl) {
+      this.dom.previewContainer.innerHTML = '';
+      this.currentPreviewData = null;
+      return;
+    }
+
+    const cleanUrl = extraction.cleanUrl;
+
+    // Immediately sanitize the input box so the user sees the clean canonical link!
+    if (this.dom.urlInput.value !== cleanUrl) {
+      this.dom.urlInput.value = cleanUrl;
+    }
+
+    if (this.currentPreviewData && this.currentPreviewData.url === cleanUrl) {
       return;
     }
 
@@ -476,7 +544,7 @@ class App {
         </div>
       `;
 
-      const metadata = await resolveSocialMetadata(text);
+      const metadata = await resolveSocialMetadata(cleanUrl);
       this.currentPreviewData = metadata;
       this.renderPreviewCard(metadata);
     } catch (err) {
@@ -488,10 +556,10 @@ class App {
     const platformConfig = PLATFORMS[data.platform.toUpperCase()] || PLATFORMS.GENERIC;
     const categories = store.categories;
     const defaultCat = categories.find(c => c.id === 'cat-general' || c.name.trim().toLowerCase() === 'general') || categories[0];
-    const defaultCatId = defaultCat ? defaultCat.id : (categories[0]?.id || '');
+    const preSelectedCatId = this.dom.preCategorySelect?.value || (defaultCat ? defaultCat.id : (categories[0]?.id || ''));
 
     const optionsHtml = categories.map(cat => 
-      `<option value="${cat.id}" ${cat.id === defaultCatId ? 'selected' : ''}>${cat.name}</option>`
+      `<option value="${cat.id}" ${cat.id === preSelectedCatId ? 'selected' : ''}>${escapeHtml(cat.name)}</option>`
     ).join('');
 
     const activeSender = store.activeSender || 'George';
@@ -538,10 +606,17 @@ class App {
       </div>
     `;
 
-    // Ensure General is pre-selected
+    // Ensure selected category is synchronized
     const categorySelect = document.getElementById('preview-category-select');
-    if (categorySelect && defaultCatId) {
-      categorySelect.value = defaultCatId;
+    if (categorySelect) {
+      if (preSelectedCatId) {
+        categorySelect.value = preSelectedCatId;
+      }
+      categorySelect.addEventListener('change', () => {
+        if (this.dom.preCategorySelect) {
+          this.dom.preCategorySelect.value = categorySelect.value;
+        }
+      });
     }
 
     // Bind add button
@@ -674,7 +749,7 @@ class App {
       ? '<span class="sender-badge sender-badge-yenka"><i class="fa-solid fa-heart" style="color:#ff4099;"></i> Yenka</span>' 
       : '<span class="sender-badge sender-badge-george"><i class="fa-solid fa-user" style="color:#00e5ff;"></i> George</span>';
 
-    const shareMessage = `¡Tenemos un Ganador en Pecera Social!\n\nSumergido por: ${senderDisplay}\nPublicación: ${winner.title}\n${authorLine}Categoría: ${category.name}\n\nVer publicación original:\n${winner.url}`;
+    const shareMessage = `¡Tenemos un Ganador en Sorteitos!\n\nSumergido por: ${senderDisplay}\nPublicación: ${winner.title}\n${authorLine}Categoría: ${category.name}\n\nVer publicación original:\n${winner.url}`;
     const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareMessage)}`;
 
     const fallbackSvg = generatePlaceholderSvg(platformConfig, winner.title, winner.author, winner.mediaType, winner.id);

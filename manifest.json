@@ -1,6 +1,6 @@
 {
-  "name": "Pecera Social - Sorteos George & Yenka",
-  "short_name": "Pecera Social",
+  "name": "Sorteitos - Sorteos George & Yenka",
+  "short_name": "Sorteitos",
   "description": "Sorteo interactivo de videos de Instagram, TikTok y YouTube para George & Yenka",
   "start_url": "./index.html",
   "scope": "./",

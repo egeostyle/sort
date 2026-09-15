@@ -955,14 +955,41 @@ dialog::backdrop {
   opacity: 0.65;
 }
 
-/* Sender Selector Row */
+/* Sender & Pre-Category Selector Row */
 .sender-selector-row {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.65rem;
   margin-top: 0.65rem;
   padding-top: 0.55rem;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.sender-pill-wrapper,
+.pre-category-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.pre-category-select {
+  padding: 0.28rem 0.65rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border-radius: var(--radius-full);
+  background: rgba(4, 18, 40, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--text-main);
+  cursor: pointer;
+  outline: none;
+  transition: all var(--transition-fast);
+}
+
+.pre-category-select:focus,
+.pre-category-select:hover {
+  border-color: var(--accent-cyan);
 }
 
 .sender-selector-label {

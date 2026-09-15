@@ -54,11 +54,225 @@ function escapeXml(unsafe) {
 }
 
 /**
+ * Extracts and sanitizes social media URLs by removing tracking tags,
+ * locale parameters, share wrappers and extraneous query strings.
+ */
+export function extractAndCleanUrl(rawInput) {
+  if (!rawInput || typeof rawInput !== 'string') return null;
+  const trimmed = rawInput.trim();
+
+  // Extract URL pattern from input string (handling any preface text like "Mira este video https://...")
+  const urlRegex = /(https?:\/\/[^\s<>"']+|www\.[^\s<>"']+)/i;
+  const match = trimmed.match(urlRegex);
+  if (!match) return null;
+
+  let urlStr = match[1];
+  if (urlStr.toLowerCase().startsWith('www.')) {
+    urlStr = 'https://' + urlStr;
+  }
+
+  // Strip trailing punctuation like periods or parentheses from text sharing
+  urlStr = urlStr.replace(/[.,;!?)]+$/, '');
+
+  try {
+    const parsed = new URL(urlStr);
+    const host = parsed.hostname.toLowerCase();
+    const pathname = parsed.pathname;
+
+    // 1. FACEBOOK
+    if (host.includes('facebook.com') || host.includes('fb.watch') || host.includes('fb.com')) {
+      if (host.includes('fb.watch')) {
+        const code = pathname.replace(/^\/+/, '').split('/')[0];
+        return {
+          cleanUrl: code ? `https://fb.watch/${code}/` : urlStr,
+          rawUrl: urlStr,
+          platform: 'facebook'
+        };
+      }
+
+      // /reel/ID or /reels/ID
+      const reelMatch = pathname.match(/\/reels?\/([^/?#]+)/i);
+      if (reelMatch) {
+        return {
+          cleanUrl: `https://www.facebook.com/reel/${reelMatch[1]}`,
+          rawUrl: urlStr,
+          platform: 'facebook'
+        };
+      }
+
+      // /share/r/ID (reels) or /share/v/ID or /share/p/ID
+      const shareMatch = pathname.match(/\/share\/([rvp])\/([^/?#]+)/i);
+      if (shareMatch) {
+        const type = shareMatch[1].toLowerCase();
+        const id = shareMatch[2];
+        if (type === 'r') {
+          return {
+            cleanUrl: `https://www.facebook.com/reel/${id}`,
+            rawUrl: urlStr,
+            platform: 'facebook'
+          };
+        }
+        return {
+          cleanUrl: `https://www.facebook.com/share/${type}/${id}/`,
+          rawUrl: urlStr,
+          platform: 'facebook'
+        };
+      }
+
+      // /watch/?v=ID
+      if (pathname.includes('/watch')) {
+        const v = parsed.searchParams.get('v');
+        if (v) {
+          return {
+            cleanUrl: `https://www.facebook.com/watch/?v=${v}`,
+            rawUrl: urlStr,
+            platform: 'facebook'
+          };
+        }
+      }
+
+      // /[user]/videos/[id] or /[user]/posts/[id] or /[user]/reels/[id]
+      const userMediaMatch = pathname.match(/^\/([^/]+)\/(videos|posts|reels)\/([^/?#]+)/i);
+      if (userMediaMatch) {
+        const user = userMediaMatch[1];
+        const kind = userMediaMatch[2].toLowerCase();
+        const id = userMediaMatch[3];
+        return {
+          cleanUrl: `https://www.facebook.com/${user}/${kind}/${id}/`,
+          rawUrl: urlStr,
+          platform: 'facebook'
+        };
+      }
+
+      // Generic Facebook fallback without tracking params
+      return {
+        cleanUrl: `https://www.facebook.com${pathname.replace(/\/+$/, '')}`,
+        rawUrl: urlStr,
+        platform: 'facebook'
+      };
+    }
+
+    // 2. INSTAGRAM
+    if (host.includes('instagram.com') || host.includes('instagr.am')) {
+      const reelMatch = pathname.match(/\/reels?\/([^/?#]+)/i);
+      if (reelMatch) {
+        return {
+          cleanUrl: `https://www.instagram.com/reel/${reelMatch[1]}/`,
+          rawUrl: urlStr,
+          platform: 'instagram'
+        };
+      }
+
+      const pMatch = pathname.match(/\/p\/([^/?#]+)/i);
+      if (pMatch) {
+        return {
+          cleanUrl: `https://www.instagram.com/p/${pMatch[1]}/`,
+          rawUrl: urlStr,
+          platform: 'instagram'
+        };
+      }
+
+      const shareMatch = pathname.match(/\/share\/(?:reel|p)\/([^/?#]+)/i);
+      if (shareMatch) {
+        return {
+          cleanUrl: `https://www.instagram.com/reel/${shareMatch[1]}/`,
+          rawUrl: urlStr,
+          platform: 'instagram'
+        };
+      }
+
+      return {
+        cleanUrl: `https://www.instagram.com${pathname}`,
+        rawUrl: urlStr,
+        platform: 'instagram'
+      };
+    }
+
+    // 3. TIKTOK
+    if (host.includes('tiktok.com')) {
+      if (host.includes('vm.tiktok.com') || host.includes('vt.tiktok.com')) {
+        const code = pathname.replace(/^\/+/, '').split('/')[0];
+        return {
+          cleanUrl: `https://${host}/${code}/`,
+          rawUrl: urlStr,
+          platform: 'tiktok'
+        };
+      }
+
+      const videoMatch = pathname.match(/(@[^/]+)\/video\/(\d+)/i);
+      if (videoMatch) {
+        return {
+          cleanUrl: `https://www.tiktok.com/${videoMatch[1]}/video/${videoMatch[2]}`,
+          rawUrl: urlStr,
+          platform: 'tiktok'
+        };
+      }
+
+      return {
+        cleanUrl: `https://www.tiktok.com${pathname}`,
+        rawUrl: urlStr,
+        platform: 'tiktok'
+      };
+    }
+
+    // 4. YOUTUBE
+    if (host.includes('youtube.com') || host.includes('youtu.be')) {
+      if (host.includes('youtu.be')) {
+        const id = pathname.replace(/^\/+/, '').split('/')[0];
+        return {
+          cleanUrl: `https://youtu.be/${id}`,
+          rawUrl: urlStr,
+          platform: 'youtube'
+        };
+      }
+      if (pathname.includes('/shorts/')) {
+        const id = pathname.split('/shorts/')[1]?.split('/')[0];
+        return {
+          cleanUrl: `https://www.youtube.com/shorts/${id}`,
+          rawUrl: urlStr,
+          platform: 'youtube'
+        };
+      }
+      const v = parsed.searchParams.get('v');
+      if (v) {
+        return {
+          cleanUrl: `https://www.youtube.com/watch?v=${v}`,
+          rawUrl: urlStr,
+          platform: 'youtube'
+        };
+      }
+    }
+
+    // 5. GENERIC: Strip marketing/tracking parameters
+    const generic = new URL(urlStr);
+    const trackingParams = [
+      'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content',
+      'fbclid', 'gclid', 'msclkid', 'ref', 'source', 'locale', 'mibextid',
+      'igsh', 'igshid', '_r', '_t', 'is_from_webapp', 'sender_device'
+    ];
+    trackingParams.forEach(p => generic.searchParams.delete(p));
+
+    return {
+      cleanUrl: generic.toString(),
+      rawUrl: urlStr,
+      platform: 'generic'
+    };
+  } catch (err) {
+    return {
+      cleanUrl: urlStr,
+      rawUrl: urlStr,
+      platform: 'generic'
+    };
+  }
+}
+
+/**
  * Parses any incoming URL to determine platform, author, mediaType, code and meaningful title
  */
 export function detectPlatform(urlString) {
   try {
-    const cleanUrl = urlString.trim();
+    const cleanExtraction = extractAndCleanUrl(urlString);
+    const cleanUrl = cleanExtraction ? cleanExtraction.cleanUrl : urlString.trim();
     const url = new URL(cleanUrl);
     const host = url.hostname.toLowerCase();
     const path = url.pathname;
@@ -548,7 +762,9 @@ function isGarbageThumbnail(url) {
  * 3. High-fidelity synthetic card generator & smart URL parser
  */
 export async function resolveSocialMetadata(rawUrl) {
-  const detected = detectPlatform(rawUrl);
+  const cleanExtraction = extractAndCleanUrl(rawUrl);
+  const cleanUrl = cleanExtraction ? cleanExtraction.cleanUrl : (rawUrl || '').trim();
+  const detected = detectPlatform(cleanUrl);
   if (!detected) {
     throw new Error('URL inválida o no soportada');
   }
@@ -556,9 +772,9 @@ export async function resolveSocialMetadata(rawUrl) {
   const { platform, mediaType, author, title, parsedId } = detected;
   const brandedSvg = generatePlaceholderSvg(platform, title, author, mediaType, parsedId);
 
-  // Initialize result with high-fidelity defaults
+  // Initialize result with high-fidelity defaults using clean URL
   const result = {
-    url: rawUrl,
+    url: cleanUrl,
     platform: platform.id,
     platformName: platform.name,
     color: platform.color,
@@ -573,7 +789,7 @@ export async function resolveSocialMetadata(rawUrl) {
   if (platform.id === 'youtube' && parsedId) {
     result.thumbnail = `https://img.youtube.com/vi/${parsedId}/hqdefault.jpg`;
     try {
-      const res = await fetch(`https://noembed.com/embed?url=${encodeURIComponent(rawUrl)}`);
+      const res = await fetch(`https://noembed.com/embed?url=${encodeURIComponent(cleanUrl)}`);
       if (res.ok) {
         const data = await res.json();
         if (data.title && !isGarbageTitle(data.title, parsedId)) result.title = data.title;
@@ -588,7 +804,7 @@ export async function resolveSocialMetadata(rawUrl) {
   // Strategy B: TikTok oEmbed (returns real caption and thumbnail!)
   if (platform.id === 'tiktok') {
     try {
-      const res = await fetch(`https://www.tiktok.com/oembed?url=${encodeURIComponent(rawUrl)}`);
+      const res = await fetch(`https://www.tiktok.com/oembed?url=${encodeURIComponent(cleanUrl)}`);
       if (res.ok) {
         const data = await res.json();
         if (data.title && !isGarbageTitle(data.title, parsedId)) result.title = data.title;
@@ -607,7 +823,7 @@ export async function resolveSocialMetadata(rawUrl) {
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 3500);
-    const res = await fetch(`https://api.microlink.io?url=${encodeURIComponent(rawUrl)}`, {
+    const res = await fetch(`https://api.microlink.io?url=${encodeURIComponent(cleanUrl)}`, {
       signal: controller.signal
     });
     clearTimeout(timeoutId);
@@ -636,7 +852,7 @@ export async function resolveSocialMetadata(rawUrl) {
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 2000);
-    const res = await fetch(`https://noembed.com/embed?url=${encodeURIComponent(rawUrl)}`, {
+    const res = await fetch(`https://noembed.com/embed?url=${encodeURIComponent(cleanUrl)}`, {
       signal: controller.signal
     });
     clearTimeout(timeoutId);

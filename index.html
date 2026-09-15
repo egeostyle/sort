@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Pecera Social - Sorteo Interactivo de Publicaciones</title>
+  <title>Sorteitos - Sorteo Interactivo George & Yenka</title>
   <meta name="description" content="Webapp lúdica de sorteo interactivo con pecera virtual para enlaces de Instagram, TikTok y Facebook con persistencia y diseño fluido." />
   <meta name="theme-color" content="#050e1e" />
   <meta name="referrer" content="no-referrer" />
@@ -46,7 +46,7 @@
         <div class="brand">
           <img src="assets/icon-192.png" alt="George & Yenka" class="brand-avatar-img" />
           <div class="brand-titles">
-            <span class="brand-name">Pecera Social</span>
+            <span class="brand-name">Sorteitos</span>
             <span class="brand-badge">George & Yenka</span>
           </div>
         </div>
@@ -97,16 +97,25 @@
           </div>
         </div>
 
-        <!-- Sender Selector Row -->
+        <!-- Sender and Category Options Row -->
         <div class="sender-selector-row">
-          <span class="sender-selector-label">Sumergido por:</span>
-          <div id="sender-pills-group" class="sender-pills-group">
-            <button type="button" class="sender-pill sender-george active" data-sender="George">
-              <i class="fa-solid fa-user" style="color:#00e5ff;"></i> George
-            </button>
-            <button type="button" class="sender-pill sender-yenka" data-sender="Yenka">
-              <i class="fa-solid fa-heart" style="color:#ff4099;"></i> Yenka
-            </button>
+          <div class="sender-pill-wrapper">
+            <span class="sender-selector-label">Sumergido por:</span>
+            <div id="sender-pills-group" class="sender-pills-group">
+              <button type="button" class="sender-pill sender-george active" data-sender="George">
+                <i class="fa-solid fa-user" style="color:#00e5ff;"></i> George
+              </button>
+              <button type="button" class="sender-pill sender-yenka" data-sender="Yenka">
+                <i class="fa-solid fa-heart" style="color:#ff4099;"></i> Yenka
+              </button>
+            </div>
+          </div>
+
+          <div class="pre-category-wrapper">
+            <span class="sender-selector-label">Categoría:</span>
+            <select id="pre-category-select" class="select-category pre-category-select" title="Selecciona la categoría antes o después de ingresar el enlace">
+              <!-- Dynamically populated with General by default -->
+            </select>
           </div>
         </div>
 
@@ -137,6 +146,7 @@
                 <stop offset="100%" stop-color="#ffffff" stop-opacity="0.38"/>
               </linearGradient>
 
+              <!-- Oceanic Dark Water Depth Gradient -->
               <linearGradient id="waterDepthGrad" x1="0%" y1="0%" x2="0%" y2="100%">
                 <stop offset="0%" stop-color="#00e5ff" stop-opacity="0.48"/>
                 <stop offset="22%" stop-color="#0094ff" stop-opacity="0.68"/>
@@ -144,11 +154,28 @@
                 <stop offset="100%" stop-color="#011648" stop-opacity="0.98"/>
               </linearGradient>
 
+              <!-- Clear Light Theme Vibrant Aquamarine Depth Gradient -->
+              <linearGradient id="waterDepthGradClear" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#48cae4" stop-opacity="0.65"/>
+                <stop offset="25%" stop-color="#0096c7" stop-opacity="0.75"/>
+                <stop offset="70%" stop-color="#0077b6" stop-opacity="0.88"/>
+                <stop offset="100%" stop-color="#023e8a" stop-opacity="0.94"/>
+              </linearGradient>
+
+              <!-- Oceanic Dark Water Surface Meniscus -->
               <radialGradient id="waterSurfaceGrad" cx="50%" cy="40%" r="50%">
                 <stop offset="0%" stop-color="#ffffff" stop-opacity="0.55"/>
                 <stop offset="45%" stop-color="#00e5ff" stop-opacity="0.42"/>
                 <stop offset="85%" stop-color="#0088ff" stop-opacity="0.28"/>
                 <stop offset="100%" stop-color="#00e5ff" stop-opacity="0.75"/>
+              </radialGradient>
+
+              <!-- Clear Light Theme Water Surface Meniscus -->
+              <radialGradient id="waterSurfaceGradClear" cx="50%" cy="40%" r="50%">
+                <stop offset="0%" stop-color="#ffffff" stop-opacity="0.88"/>
+                <stop offset="45%" stop-color="#90e0ef" stop-opacity="0.72"/>
+                <stop offset="85%" stop-color="#00b4d8" stop-opacity="0.55"/>
+                <stop offset="100%" stop-color="#0096c7" stop-opacity="0.85"/>
               </radialGradient>
 
               <radialGradient id="rimMouthGrad" cx="50%" cy="50%" r="50%">
@@ -170,27 +197,27 @@
             </defs>
 
             <!-- Base pedestal foot -->
-            <ellipse cx="230" cy="422" rx="84" ry="11" fill="#021c3e" stroke="rgba(255,255,255,0.45)" stroke-width="1.5"/>
+            <ellipse cx="230" cy="422" rx="84" ry="11" fill="#021c3e" stroke="rgba(255,255,255,0.45)" stroke-width="1.5" class="glass-pedestal"/>
             <ellipse cx="230" cy="422" rx="80" ry="7" fill="none" stroke="rgba(0,229,255,0.35)" stroke-width="1"/>
 
             <!-- Submerged Water Body (Clipped inside bowl) -->
             <g clip-path="url(#bowlWaterClip)">
-              <path d="M 20,152 L 440,152 L 440,430 L 20,430 Z" fill="url(#waterDepthGrad)"/>
+              <path class="water-submerged-body" d="M 20,152 L 440,152 L 440,430 L 20,430 Z" fill="url(#waterDepthGrad)"/>
               
               <!-- Caustics shimmer inside water -->
-              <ellipse cx="230" cy="375" rx="130" ry="34" fill="#00e5ff" fill-opacity="0.2" filter="blur(16px)"/>
-              <ellipse cx="165" cy="280" rx="80" ry="45" fill="#ffffff" fill-opacity="0.12" filter="blur(14px)"/>
-              <ellipse cx="300" cy="315" rx="85" ry="35" fill="#00e5ff" fill-opacity="0.18" filter="blur(18px)"/>
+              <ellipse class="water-caustic-cyan" cx="230" cy="375" rx="130" ry="34" fill="#00e5ff" fill-opacity="0.2" filter="blur(16px)"/>
+              <ellipse class="water-caustic-white" cx="165" cy="280" rx="80" ry="45" fill="#ffffff" fill-opacity="0.12" filter="blur(14px)"/>
+              <ellipse class="water-caustic-cyan" cx="300" cy="315" rx="85" ry="35" fill="#00e5ff" fill-opacity="0.18" filter="blur(18px)"/>
             </g>
 
             <!-- Water Surface Meniscus -->
             <g class="animated-water-meniscus">
-              <ellipse cx="230" cy="152" rx="180" ry="20" fill="url(#waterSurfaceGrad)" stroke="rgba(255,255,255,0.85)" stroke-width="1.5"/>
+              <ellipse class="water-surface-ellipse" cx="230" cy="152" rx="180" ry="20" fill="url(#waterSurfaceGrad)" stroke="rgba(255,255,255,0.85)" stroke-width="1.5"/>
               <ellipse cx="230" cy="152" rx="177" ry="16" fill="none" stroke="rgba(0,229,255,0.65)" stroke-width="1"/>
             </g>
 
             <!-- Crystal Glass Vessel Body -->
-            <path d="M 125,35 
+            <path class="glass-vessel-contour" d="M 125,35 
                      C 98,65 26,135 26,230 
                      C 26,348 100,418 150,422 
                      L 310,422 
@@ -202,7 +229,7 @@
                   stroke-width="2"/>
 
             <!-- Studio Light Crescent Specular Highlight (Upper Left) -->
-            <path d="M 134,56 
+            <path class="glass-specular-primary" d="M 134,56 
                      C 85,100 52,165 52,230 
                      C 52,280 65,315 82,345" 
                   fill="none" 
@@ -212,7 +239,7 @@
                   stroke-opacity="0.8" 
                   filter="blur(1px)"/>
 
-            <path d="M 144,68 
+            <path class="glass-specular-primary" d="M 144,68 
                      C 102,112 74,168 74,230" 
                   fill="none" 
                   stroke="#ffffff" 
@@ -221,7 +248,7 @@
                   stroke-opacity="0.45"/>
 
             <!-- Soft Bounce Specular Glare (Lower Right) -->
-            <path d="M 408,240 
+            <path class="glass-specular-secondary" d="M 408,240 
                      C 412,290 385,350 345,385" 
                   fill="none" 
                   stroke="#00e5ff" 
@@ -231,7 +258,7 @@
                   filter="blur(1.5px)"/>
 
             <!-- Top Rim Mouth Opening (Integrated with glass neck) -->
-            <ellipse cx="230" cy="35" rx="105" ry="14" fill="url(#rimMouthGrad)" stroke="rgba(255,255,255,0.8)" stroke-width="2"/>
+            <ellipse class="glass-rim-mouth" cx="230" cy="35" rx="105" ry="14" fill="url(#rimMouthGrad)" stroke="rgba(255,255,255,0.8)" stroke-width="2"/>
             <ellipse cx="230" cy="35" rx="101" ry="10" fill="none" stroke="rgba(0,229,255,0.45)" stroke-width="1"/>
             <path d="M 155,31 C 190,27 270,27 305,31" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-opacity="0.95"/>
           </svg>

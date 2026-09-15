@@ -1,9 +1,9 @@
 /**
- * Pecera Social - Service Worker
+ * Sorteitos - Service Worker
  * Enables PWA installation, offline shell caching, and Web Share Target reception.
  */
 
-const CACHE_NAME = 'pecera-social-v2';
+const CACHE_NAME = 'sorteitos-v3';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',

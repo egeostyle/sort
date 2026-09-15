@@ -1,4 +1,4 @@
-# 🐟 Pecera Social - Sorteos George & Yenka
+# 🐟 Sorteitos - Sorteos George & Yenka
 
 > Webapp lúdica, responsiva y en tiempo real diseñada con estética acuática moderna para almacenar enlaces de redes sociales (Instagram, TikTok, Facebook, YouTube, etc.) en forma de tickets sumergidos en una pecera interactiva y realizar sorteos aleatorios.
 >

@@ -78,7 +78,7 @@ export class ShortcutsGuide {
       stepsPWA: [
         {
           num: 1,
-          text: 'Abre la webapp de la Pecera en Google Chrome o tu navegador en tu Android.'
+          text: 'Abre la webapp de Sorteitos en Google Chrome o tu navegador en tu Android.'
         },
         {
           num: 2,
@@ -86,7 +86,7 @@ export class ShortcutsGuide {
         },
         {
           num: 3,
-          text: '¡Listo! Cuando estés en Instagram o TikTok y toques **Compartir**, verás en la lista de apps el ícono de **Pecera Social** (con la foto de George & Yenka). Al tocarlo, el video se sumerge automáticamente.'
+          text: '¡Listo! Cuando estés en Instagram o TikTok y toques **Compartir**, verás en la lista de apps el ícono de **Sorteitos** (con la foto de George & Yenka). Al tocarlo, el video se sumerge automáticamente.'
         }
       ],
       stepsHttpShortcuts: [
