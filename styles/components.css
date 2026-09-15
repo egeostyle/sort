@@ -183,6 +183,20 @@
   transform: scale(1.1);
 }
 
+.preview-loading-badge {
+  font-size: 0.68rem;
+  color: var(--accent-cyan);
+  background: rgba(0, 229, 255, 0.12);
+  border: 1px solid rgba(0, 229, 255, 0.3);
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 600;
+  margin-left: auto;
+}
+
 .preview-content {
   flex: 1;
   display: flex;

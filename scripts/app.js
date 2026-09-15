@@ -221,9 +221,7 @@ class App {
       clearTimeout(urlDebounceTimer);
       const clipboardText = e.clipboardData?.getData('text');
       if (clipboardText) {
-        setTimeout(() => {
-          this.handleUrlInput(clipboardText);
-        }, 30);
+        this.handleUrlInput(clipboardText);
       }
     });
 
@@ -547,21 +545,62 @@ class App {
       return;
     }
 
-    try {
-      this.dom.previewContainer.innerHTML = `
-        <div class="preview-card" style="align-items:center; justify-content:center; padding: 1.5rem;">
-          <span style="display:flex; align-items:center; gap: 0.5rem; color: var(--accent-cyan);">
-            <svg class="spin" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
-            Analizando publicación...
-          </span>
-        </div>
-      `;
+    // 1. Render instant optimistic card immediately (0ms latency!)
+    const detected = detectPlatform(cleanUrl);
+    const fallbackSvg = detected 
+      ? generatePlaceholderSvg(detected.platform, detected.title, detected.author, detected.mediaType, detected.parsedId)
+      : '';
 
+    const initialData = {
+      url: cleanUrl,
+      platform: detected?.platform.id || 'generic',
+      platformName: detected?.platform.name || 'Publicación',
+      color: detected?.platform.color || '#00e5ff',
+      author: detected?.author || '',
+      title: detected?.title || 'Publicación',
+      mediaType: detected?.mediaType || 'video',
+      thumbnail: fallbackSvg,
+      fallbackSvg: fallbackSvg,
+      isLoadingDetails: true
+    };
+
+    this.currentPreviewData = initialData;
+    this.renderPreviewCard(initialData);
+
+    // 2. Fetch rich metadata in background and update seamlessly
+    try {
       const metadata = await resolveSocialMetadata(cleanUrl);
-      this.currentPreviewData = metadata;
-      this.renderPreviewCard(metadata);
+      if (this.currentPreviewData && this.currentPreviewData.url === cleanUrl) {
+        this.updatePreviewCardDetails(metadata);
+      }
     } catch (err) {
-      this.dom.previewContainer.innerHTML = '';
+      const loadingIndicator = document.getElementById('preview-loading-indicator');
+      if (loadingIndicator) loadingIndicator.remove();
+    }
+  }
+
+  updatePreviewCardDetails(metadata) {
+    if (!this.currentPreviewData) return;
+    this.currentPreviewData = { ...this.currentPreviewData, ...metadata, isLoadingDetails: false };
+
+    const imgElem = document.getElementById('preview-img-elem');
+    if (imgElem && metadata.thumbnail) {
+      imgElem.src = metadata.thumbnail;
+    }
+
+    const titleInput = document.getElementById('preview-title-input');
+    if (titleInput && metadata.title) {
+      titleInput.value = metadata.title;
+    }
+
+    const authorElem = this.dom.previewContainer.querySelector('.preview-author');
+    if (authorElem && metadata.author) {
+      authorElem.textContent = metadata.author;
+    }
+
+    const loadingIndicator = document.getElementById('preview-loading-indicator');
+    if (loadingIndicator) {
+      loadingIndicator.remove();
     }
   }
 
@@ -599,6 +638,7 @@ class App {
               </span>
               ${senderBadge}
               <span class="preview-author">${escapeHtml(data.author)}</span>
+              ${data.isLoadingDetails ? '<span id="preview-loading-indicator" class="preview-loading-badge"><i class="fa-solid fa-spinner fa-spin"></i> Obteniendo portada...</span>' : ''}
             </div>
             <div class="preview-title-field-wrap">
               <input type="text" id="preview-title-input" class="preview-title-input" value="${escapeHtml(data.title)}" placeholder="Nombre o nota del boleto..." aria-label="Título del boleto" />
