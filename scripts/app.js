@@ -4,7 +4,7 @@
  */
 
 import { store } from './store.js';
-import { PLATFORMS, resolveSocialMetadata, generatePlaceholderSvg, getValidThumbnail, extractAndCleanUrl } from './social.js';
+import { PLATFORMS, detectPlatform, resolveSocialMetadata, generatePlaceholderSvg, getValidThumbnail, extractAndCleanUrl } from './social.js';
 import { FishbowlController } from './fishbowl.js';
 import { ConfettiCannon } from './confetti.js';
 import { sound } from './sound.js';
