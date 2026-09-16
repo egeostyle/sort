@@ -528,13 +528,7 @@ class App {
     }
 
     const extraction = extractAndCleanUrl(rawText);
-    if (!extraction || !extraction.cleanUrl) {
-      this.dom.previewContainer.innerHTML = '';
-      this.currentPreviewData = null;
-      return;
-    }
-
-    const cleanUrl = extraction.cleanUrl;
+    const cleanUrl = extraction?.cleanUrl || (rawText.trim().startsWith('http') ? rawText.trim() : 'https://' + rawText.trim());
 
     // Immediately sanitize the input box so the user sees the clean canonical link!
     if (this.dom.urlInput.value !== cleanUrl) {
@@ -549,7 +543,7 @@ class App {
     const detected = detectPlatform(cleanUrl);
     const fallbackSvg = detected 
       ? generatePlaceholderSvg(detected.platform, detected.title, detected.author, detected.mediaType, detected.parsedId)
-      : '';
+      : generatePlaceholderSvg(PLATFORMS.GENERIC, 'Publicación Web', 'Web', 'link', 'web');
 
     const initialData = {
       url: cleanUrl,

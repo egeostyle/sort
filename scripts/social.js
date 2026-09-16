@@ -59,33 +59,41 @@ function escapeXml(unsafe) {
  */
 export function extractAndCleanUrl(rawInput) {
   if (!rawInput || typeof rawInput !== 'string') return null;
-  const trimmed = rawInput.trim();
+  let trimmed = rawInput.trim();
 
-  // Extract URL pattern from input string (handling any preface text like "Mira este video https://...")
-  const urlRegex = /(https?:\/\/[^\s<>"']+|www\.[^\s<>"']+)/i;
-  const match = trimmed.match(urlRegex);
-  if (!match) return null;
-
-  let urlStr = match[1];
-  if (urlStr.toLowerCase().startsWith('www.')) {
-    urlStr = 'https://' + urlStr;
+  // If no protocol or www, extract domain and prepend https://
+  if (!/^https?:\/\//i.test(trimmed)) {
+    const urlInside = trimmed.match(/https?:\/\/[^\s<>"']+/i);
+    if (urlInside) {
+      trimmed = urlInside[0];
+    } else {
+      const domainMatch = trimmed.match(/(?:www\.)?([a-zA-Z0-9-]+\.(?:com|org|net|watch|me|io|tv|app|co|pe|es)[^\s<>"']*)/i);
+      if (domainMatch) {
+        trimmed = 'https://' + domainMatch[1];
+      }
+    }
   }
 
   // Strip trailing punctuation like periods or parentheses from text sharing
-  urlStr = urlStr.replace(/[.,;!?)]+$/, '');
+  trimmed = trimmed.replace(/[.,;!?)]+$/, '');
 
   try {
-    const parsed = new URL(urlStr);
-    const host = parsed.hostname.toLowerCase();
+    const parsed = new URL(trimmed);
+    let host = parsed.hostname.toLowerCase();
     const pathname = parsed.pathname;
 
+    // Normalize mobile subdomains (m.facebook.com, mobile.facebook.com -> www.facebook.com)
+    if (host.includes('facebook.com')) {
+      host = 'www.facebook.com';
+    }
+
     // 1. FACEBOOK
-    if (host.includes('facebook.com') || host.includes('fb.watch') || host.includes('fb.com')) {
+    if (host.includes('facebook.com') || host.includes('fb.watch') || host.includes('fb.com') || host.includes('fb.me')) {
       if (host.includes('fb.watch')) {
         const code = pathname.replace(/^\/+/, '').split('/')[0];
         return {
-          cleanUrl: code ? `https://fb.watch/${code}/` : urlStr,
-          rawUrl: urlStr,
+          cleanUrl: code ? `https://fb.watch/${code}/` : trimmed,
+          rawUrl: trimmed,
           platform: 'facebook'
         };
       }
@@ -95,32 +103,64 @@ export function extractAndCleanUrl(rawInput) {
       if (reelMatch) {
         return {
           cleanUrl: `https://www.facebook.com/reel/${reelMatch[1]}`,
-          rawUrl: urlStr,
+          rawUrl: trimmed,
           platform: 'facebook'
         };
       }
 
-      // /share/r/ID (reels), /share/v/ID (video) or /share/p/ID (posts)
-      const shareMatch = pathname.match(/\/share\/([rvp])\/([^/?#]+)/i);
-      if (shareMatch) {
-        const id = shareMatch[2];
+      // /share/r/ID (reels) or /share/v/ID (video) -> convert to /reel/ID
+      const shareReelMatch = pathname.match(/\/share\/([rv])\/([^/?#]+)/i);
+      if (shareReelMatch) {
         return {
-          cleanUrl: `https://www.facebook.com/reel/${id}`,
-          rawUrl: urlStr,
+          cleanUrl: `https://www.facebook.com/reel/${shareReelMatch[2]}`,
+          rawUrl: trimmed,
           platform: 'facebook'
         };
       }
 
-      // /watch/?v=ID
+      // /share/p/ID (posts) -> clean share link without mibextid tracking
+      const sharePostMatch = pathname.match(/\/share\/p\/([^/?#]+)/i);
+      if (sharePostMatch) {
+        return {
+          cleanUrl: `https://www.facebook.com/share/p/${sharePostMatch[1]}/`,
+          rawUrl: trimmed,
+          platform: 'facebook'
+        };
+      }
+
+      // /watch/?v=ID or /watch?v=ID
       if (pathname.includes('/watch')) {
         const v = parsed.searchParams.get('v');
         if (v) {
           return {
             cleanUrl: `https://www.facebook.com/watch/?v=${v}`,
-            rawUrl: urlStr,
+            rawUrl: trimmed,
             platform: 'facebook'
           };
         }
+      }
+
+      // photo.php or /photo/ with fbid
+      const fbid = parsed.searchParams.get('fbid');
+      if (fbid) {
+        return {
+          cleanUrl: `https://www.facebook.com/photo/?fbid=${fbid}`,
+          rawUrl: trimmed,
+          platform: 'facebook'
+        };
+      }
+
+      // permalink.php or story.php with story_fbid
+      const storyFbid = parsed.searchParams.get('story_fbid');
+      const userId = parsed.searchParams.get('id');
+      if (storyFbid) {
+        return {
+          cleanUrl: userId 
+            ? `https://www.facebook.com/permalink.php?story_fbid=${storyFbid}&id=${userId}`
+            : `https://www.facebook.com/permalink.php?story_fbid=${storyFbid}`,
+          rawUrl: trimmed,
+          platform: 'facebook'
+        };
       }
 
       // /[user]/videos/[id] or /[user]/posts/[id] or /[user]/reels/[id]
@@ -131,7 +171,7 @@ export function extractAndCleanUrl(rawInput) {
         const id = userMediaMatch[3];
         return {
           cleanUrl: `https://www.facebook.com/${user}/${kind}/${id}/`,
-          rawUrl: urlStr,
+          rawUrl: trimmed,
           platform: 'facebook'
         };
       }
@@ -139,7 +179,7 @@ export function extractAndCleanUrl(rawInput) {
       // Generic Facebook fallback without tracking params
       return {
         cleanUrl: `https://www.facebook.com${pathname.replace(/\/+$/, '')}`,
-        rawUrl: urlStr,
+        rawUrl: trimmed,
         platform: 'facebook'
       };
     }
