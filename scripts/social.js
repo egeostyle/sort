@@ -61,6 +61,10 @@ export function extractAndCleanUrl(rawInput) {
   if (!rawInput || typeof rawInput !== 'string') return null;
   let trimmed = rawInput.trim();
 
+  // Strip any trailing "https:" or "http:" that may have been pasted accidentally or appended
+  trimmed = trimmed.replace(/https?:?\/*$/i, '').trim();
+  if (!trimmed) return null;
+
   // If no protocol or www, extract domain and prepend https://
   if (!/^https?:\/\//i.test(trimmed)) {
     const urlInside = trimmed.match(/https?:\/\/[^\s<>"']+/i);
@@ -74,8 +78,9 @@ export function extractAndCleanUrl(rawInput) {
     }
   }
 
-  // Strip trailing punctuation like periods or parentheses from text sharing
-  trimmed = trimmed.replace(/[.,;!?)]+$/, '');
+  // Strip trailing punctuation like periods or parentheses and any trailing protocol
+  trimmed = trimmed.replace(/[.,;!?)]+$/, '').replace(/https?:?\/*$/i, '').trim();
+  const urlStr = trimmed;
 
   try {
     const parsed = new URL(trimmed);
@@ -90,30 +95,32 @@ export function extractAndCleanUrl(rawInput) {
     // 1. FACEBOOK
     if (host.includes('facebook.com') || host.includes('fb.watch') || host.includes('fb.com') || host.includes('fb.me')) {
       if (host.includes('fb.watch')) {
-        const code = pathname.replace(/^\/+/, '').split('/')[0];
+        const code = pathname.replace(/^\/+/, '').split('/')[0].replace(/https?:?\/*$/i, '');
         return {
-          cleanUrl: code ? `https://fb.watch/${code}/` : trimmed,
-          rawUrl: trimmed,
+          cleanUrl: code ? `https://fb.watch/${code}/` : urlStr,
+          rawUrl: urlStr,
           platform: 'facebook'
         };
       }
 
-      // /reel/ID or /reels/ID
-      const reelMatch = pathname.match(/\/reels?\/([^/?#]+)/i);
+      // /reel/ID or /reels/ID (prioritize digits or strip trailing protocols)
+      const reelMatch = pathname.match(/\/reels?\/(\d+)/i) || pathname.match(/\/reels?\/([^/?#]+)/i);
       if (reelMatch) {
+        const cleanId = reelMatch[1].replace(/https?:?\/*$/i, '').trim();
         return {
-          cleanUrl: `https://www.facebook.com/reel/${reelMatch[1]}`,
-          rawUrl: trimmed,
+          cleanUrl: `https://www.facebook.com/reel/${cleanId}`,
+          rawUrl: urlStr,
           platform: 'facebook'
         };
       }
 
       // /share/r/ID (reels) or /share/v/ID (video) -> convert to /reel/ID
-      const shareReelMatch = pathname.match(/\/share\/([rv])\/([^/?#]+)/i);
+      const shareReelMatch = pathname.match(/\/share\/([rv])\/(\d+)/i) || pathname.match(/\/share\/([rv])\/([^/?#]+)/i);
       if (shareReelMatch) {
+        const cleanId = shareReelMatch[2].replace(/https?:?\/*$/i, '').trim();
         return {
-          cleanUrl: `https://www.facebook.com/reel/${shareReelMatch[2]}`,
-          rawUrl: trimmed,
+          cleanUrl: `https://www.facebook.com/reel/${cleanId}`,
+          rawUrl: urlStr,
           platform: 'facebook'
         };
       }
@@ -121,9 +128,10 @@ export function extractAndCleanUrl(rawInput) {
       // /share/p/ID (posts) -> clean share link without mibextid tracking
       const sharePostMatch = pathname.match(/\/share\/p\/([^/?#]+)/i);
       if (sharePostMatch) {
+        const cleanId = sharePostMatch[1].replace(/https?:?\/*$/i, '').trim();
         return {
-          cleanUrl: `https://www.facebook.com/share/p/${sharePostMatch[1]}/`,
-          rawUrl: trimmed,
+          cleanUrl: `https://www.facebook.com/share/p/${cleanId}/`,
+          rawUrl: urlStr,
           platform: 'facebook'
         };
       }

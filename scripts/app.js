@@ -218,10 +218,13 @@ class App {
     });
 
     this.dom.urlInput.addEventListener('paste', (e) => {
+      e.preventDefault();
       clearTimeout(urlDebounceTimer);
-      const clipboardText = e.clipboardData?.getData('text');
+      const clipboardText = (e.clipboardData?.getData('text') || '').trim();
       if (clipboardText) {
-        this.handleUrlInput(clipboardText);
+        const clean = clipboardText.replace(/https?:?\/*$/i, '').trim();
+        this.dom.urlInput.value = clean;
+        this.handleUrlInput(clean);
       }
     });
 
@@ -240,7 +243,9 @@ class App {
         if (navigator.clipboard && navigator.clipboard.readText) {
           const text = await navigator.clipboard.readText();
           if (text) {
-            this.handleUrlInput(text);
+            const clean = text.replace(/https?:?\/*$/i, '').trim();
+            this.dom.urlInput.value = clean;
+            this.handleUrlInput(clean);
           } else {
             this.dom.urlInput.focus();
           }
@@ -527,8 +532,9 @@ class App {
       return;
     }
 
-    const extraction = extractAndCleanUrl(rawText);
-    const cleanUrl = extraction?.cleanUrl || (rawText.trim().startsWith('http') ? rawText.trim() : 'https://' + rawText.trim());
+    const sanitizedRaw = rawText.replace(/https?:?\/*$/i, '').trim();
+    const extraction = extractAndCleanUrl(sanitizedRaw);
+    const cleanUrl = (extraction?.cleanUrl || (sanitizedRaw.startsWith('http') ? sanitizedRaw : 'https://' + sanitizedRaw)).replace(/https?:?\/*$/i, '').trim();
 
     // Immediately sanitize the input box so the user sees the clean canonical link!
     if (this.dom.urlInput.value !== cleanUrl) {
