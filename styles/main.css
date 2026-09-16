@@ -334,6 +334,79 @@
   border-top-color: rgba(14, 45, 88, 0.1);
 }
 
+/* Tournament mode in clear theme */
+[data-theme="clear"] .tournament-backdrop {
+  background: radial-gradient(circle at 50% 40%, rgba(227, 239, 250, 0.96) 0%, rgba(242, 247, 252, 0.98) 100%);
+}
+
+[data-theme="clear"] .tournament-cand-card {
+  background: rgba(255, 255, 255, 0.94);
+  border-color: rgba(14, 45, 88, 0.18);
+  box-shadow: 0 12px 28px rgba(12, 35, 64, 0.08);
+}
+
+[data-theme="clear"] .tournament-cand-title {
+  color: #0c2340;
+}
+
+[data-theme="clear"] .tournament-cand-card.is-champion {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 243, 205, 0.95) 100%);
+  border-color: #d97706 !important;
+  box-shadow: 0 0 30px rgba(217, 119, 6, 0.3), 0 16px 36px rgba(12, 35, 64, 0.14);
+}
+
+/* Winners History in clear theme */
+[data-theme="clear"] .winner-history-row {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: rgba(14, 45, 88, 0.1);
+  box-shadow: 0 4px 14px rgba(12, 35, 64, 0.04);
+}
+
+[data-theme="clear"] .winner-history-row.is-visited {
+  background: rgba(6, 214, 160, 0.08);
+  border-color: rgba(6, 214, 160, 0.35);
+}
+
+[data-theme="clear"] .winner-history-title {
+  color: #0c2340;
+}
+
+[data-theme="clear"] .winner-history-bottom {
+  border-top-color: rgba(14, 45, 88, 0.08);
+}
+
+[data-theme="clear"] .btn-visited-toggle {
+  background: rgba(14, 45, 88, 0.05);
+  border-color: rgba(14, 45, 88, 0.15);
+  color: #486581;
+}
+
+[data-theme="clear"] .btn-visited-toggle.active {
+  background: #06d6a0;
+  border-color: #05b386;
+  color: #ffffff;
+}
+
+[data-theme="clear"] .star-btn {
+  color: rgba(14, 45, 88, 0.18);
+}
+
+[data-theme="clear"] .star-btn.filled {
+  color: #d97706;
+  text-shadow: 0 0 4px rgba(217, 119, 6, 0.3);
+}
+
+[data-theme="clear"] .winners-stats-bar {
+  background: rgba(240, 246, 252, 0.9) !important;
+  border: 1px solid rgba(14, 45, 88, 0.08);
+}
+
+[data-theme="clear"] .raffle-exclude-visited-label {
+  background: rgba(14, 45, 88, 0.04) !important;
+  border-color: rgba(14, 45, 88, 0.12) !important;
+  color: #0c2340;
+}
+
 /* Category editor inside tickets list */
 .ticket-cat-editor {
   display: inline-flex;

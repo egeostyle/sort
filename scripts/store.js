@@ -6,7 +6,8 @@ const STORAGE_KEYS = {
   SETTINGS: 'pecera_social_settings_v1',
   ACTIVE_SENDER: 'pecera_social_active_sender_v1',
   DEVICE_SENDER: 'pecera_device_sender_v1',
-  THEME: 'pecera_social_theme_v1'
+  THEME: 'pecera_social_theme_v1',
+  WINNERS: 'pecera_social_winners_v1'
 };
 
 const DEFAULT_CATEGORIES = [
@@ -22,6 +23,7 @@ class Store {
     this.subscribers = new Map();
     this.categories = this.loadCategories();
     this.tickets = this.loadTickets();
+    this.winners = this.loadWinners();
     this.settings = this.loadSettings();
     const savedDeviceSender = (typeof localStorage !== 'undefined' && (localStorage.getItem(STORAGE_KEYS.DEVICE_SENDER) || localStorage.getItem(STORAGE_KEYS.ACTIVE_SENDER)));
     this.activeSender = savedDeviceSender || 'George';
@@ -354,8 +356,104 @@ class Store {
     }
   }
 
-  getTickets(categoryId = null, sender = null) {
+  // Winners History
+  loadWinners() {
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.WINNERS);
+      if (data) {
+        const parsed = JSON.parse(data);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch (err) {
+      console.warn('Could not read winners from localStorage:', err);
+    }
+    return [];
+  }
+
+  saveWinners() {
+    try {
+      localStorage.setItem(STORAGE_KEYS.WINNERS, JSON.stringify(this.winners));
+    } catch (err) {
+      console.error('Failed to save winners:', err);
+    }
+    this.emit('WINNERS_UPDATED', this.winners);
+  }
+
+  addWinner(ticket, wonAt = new Date().toISOString()) {
+    if (!ticket) return null;
+    const winnerRecord = {
+      id: 'win-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+      ticketId: ticket.id,
+      url: ticket.url,
+      platform: ticket.platform || 'generic',
+      title: ticket.title || 'Boleto Ganador',
+      author: ticket.author || '',
+      thumbnail: ticket.thumbnail || '',
+      mediaType: ticket.mediaType || 'video',
+      categoryId: ticket.categoryId,
+      sender: ticket.sender || 'George',
+      wonAt: wonAt,
+      visited: false,
+      rating: 0
+    };
+    this.winners.unshift(winnerRecord);
+    this.saveWinners();
+    this.emit('WINNER_ADDED', winnerRecord);
+    return winnerRecord;
+  }
+
+  toggleWinnerVisited(winnerId) {
+    const winner = this.winners.find(w => w.id === winnerId);
+    if (!winner) return false;
+    winner.visited = !winner.visited;
+    this.saveWinners();
+    this.emit('WINNER_UPDATED', winner);
+    return winner.visited;
+  }
+
+  setWinnerRating(winnerId, rating) {
+    const winner = this.winners.find(w => w.id === winnerId);
+    if (!winner) return false;
+    winner.rating = Math.max(0, Math.min(5, Number(rating) || 0));
+    this.saveWinners();
+    this.emit('WINNER_UPDATED', winner);
+    return winner.rating;
+  }
+
+  deleteWinner(winnerId) {
+    const index = this.winners.findIndex(w => w.id === winnerId);
+    if (index !== -1) {
+      const removed = this.winners.splice(index, 1)[0];
+      this.saveWinners();
+      this.emit('WINNER_DELETED', removed);
+      return true;
+    }
+    return false;
+  }
+
+  clearAllWinners() {
+    this.winners = [];
+    this.saveWinners();
+    this.emit('WINNERS_UPDATED', this.winners);
+  }
+
+  getVisitedTicketKeys() {
+    const set = new Set();
+    this.winners.forEach(w => {
+      if (w.visited) {
+        if (w.ticketId) set.add(w.ticketId);
+        if (w.url) set.add(w.url);
+      }
+    });
+    return set;
+  }
+
+  getTickets(categoryId = null, sender = null, excludeVisited = false) {
     let pool = this.tickets;
+    if (excludeVisited) {
+      const visitedKeys = this.getVisitedTicketKeys();
+      pool = pool.filter(t => !visitedKeys.has(t.id) && !visitedKeys.has(t.url));
+    }
     if (categoryId && categoryId !== 'all') {
       pool = pool.filter(t => t.categoryId === categoryId);
     }
@@ -365,31 +463,40 @@ class Store {
     return pool;
   }
 
-  getTicketCount(categoryId = null, sender = null) {
-    return this.getTickets(categoryId, sender).length;
+  getTicketCount(categoryId = null, sender = null, excludeVisited = false) {
+    return this.getTickets(categoryId, sender, excludeVisited).length;
   }
 
-  getSenderCounts() {
+  getSenderCounts(excludeVisited = false) {
     let george = 0;
     let yenka = 0;
     let other = 0;
+    const pool = excludeVisited ? this.getTickets(null, null, true) : this.tickets;
 
-    this.tickets.forEach(t => {
+    pool.forEach(t => {
       const s = (t.sender || '').toLowerCase();
       if (s.includes('george')) george++;
       else if (s.includes('yenka')) yenka++;
       else other++;
     });
 
-    return { george, yenka, other, total: this.tickets.length };
+    return { george, yenka, other, total: pool.length };
   }
 
   // Raffle selection logic
-  drawRandomTicket(categoryId = 'all', sender = 'all') {
-    const pool = this.getTickets(categoryId, sender);
+  drawRandomTicket(categoryId = 'all', sender = 'all', excludeVisited = false) {
+    const pool = this.getTickets(categoryId, sender, excludeVisited);
     if (!pool || pool.length === 0) return null;
     const randomIndex = Math.floor(Math.random() * pool.length);
     return pool[randomIndex];
+  }
+
+  drawTournamentCandidates(count = 3, categoryId = 'all', sender = 'all', excludeVisited = false) {
+    const pool = this.getTickets(categoryId, sender, excludeVisited);
+    if (!pool || pool.length === 0) return [];
+    if (pool.length <= count) return [...pool];
+    const shuffled = [...pool].sort(() => 0.5 - Math.random());
+    return shuffled.slice(0, count);
   }
 
   // Settings
@@ -416,10 +523,11 @@ class Store {
   // Export / Import
   exportBackup() {
     return JSON.stringify({
-      version: 1,
+      version: 2,
       exportedAt: new Date().toISOString(),
       categories: this.categories,
-      tickets: this.tickets
+      tickets: this.tickets,
+      winners: this.winners
     }, null, 2);
   }
 
@@ -441,6 +549,10 @@ class Store {
         if (firebaseSync.isConfigured()) {
           this.tickets.forEach(t => firebaseSync.addTicket(t));
         }
+      }
+      if (Array.isArray(data.winners)) {
+        this.winners = data.winners;
+        this.saveWinners();
       }
       return true;
     } catch (e) {

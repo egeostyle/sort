@@ -225,4 +225,142 @@ export class FishbowlController {
       this.fishbowlEl.parentElement.classList.remove('is-locked');
     }
   }
+
+  // Tournament / Versus mode animation (3 candidates clash)
+  async animateTournamentRaffle(candidates, finalWinner, category) {
+    sound.playShaking(2.2);
+
+    // Lock interactions on fishbowl
+    this.fishbowlEl.classList.add('is-locked', 'is-shaking');
+    if (this.fishbowlEl.parentElement) {
+      this.fishbowlEl.parentElement.classList.add('is-locked');
+    }
+
+    const bubbleInterval = setInterval(() => {
+      this.burstBubbles(10);
+    }, 150);
+
+    // Shake & vortex for 2.2 seconds
+    await new Promise(res => setTimeout(res, 2200));
+
+    clearInterval(bubbleInterval);
+    this.fishbowlEl.classList.remove('is-shaking');
+
+    // Dramatic Versus Gong
+    sound.playVersusGong();
+
+    // Create Tournament Arena Overlay
+    const stage = document.createElement('div');
+    stage.className = 'tournament-stage';
+
+    const backdrop = document.createElement('div');
+    backdrop.className = 'tournament-backdrop';
+    stage.appendChild(backdrop);
+
+    const arena = document.createElement('div');
+    arena.className = 'tournament-arena';
+
+    arena.innerHTML = `
+      <div class="tournament-header">
+        <span class="tournament-badge">
+          <i class="fa-solid fa-bolt" style="color:#ffd166;"></i> MODO TORNEO
+        </span>
+        <h2 class="tournament-title">⚡ VERSUS ⚡</h2>
+        <p class="tournament-sub">3 Finalistas compitiendo por la victoria</p>
+      </div>
+      <div class="tournament-cards-grid">
+        ${candidates.map((cand, idx) => {
+          const isYenka = (cand.sender || '').toLowerCase().includes('yenka');
+          const senderLabel = isYenka ? 'Yenka' : 'George';
+          const senderClass = isYenka ? 'sender-yenka' : 'sender-george';
+          const senderIcon = isYenka ? 'fa-heart' : 'fa-user';
+          const color = store.getCategory(cand.categoryId)?.color || '#00e5ff';
+
+          return `
+            <div class="tournament-cand-card" id="cand-${cand.id}" data-id="${cand.id}">
+              <div class="tournament-cand-num">#${idx + 1}</div>
+              <div class="tournament-cand-tag" style="border-color:${color}; color:${color};">
+                ● ${store.getCategory(cand.categoryId)?.name || 'General'}
+              </div>
+              <div class="tournament-cand-title">${cand.title || 'Boleto'}</div>
+              <div class="tournament-cand-footer">
+                <span class="sender-badge sender-badge-${senderClass}">
+                  <i class="fa-solid ${senderIcon}"></i> ${senderLabel}
+                </span>
+                <span class="cand-status-badge">En juego</span>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+
+    stage.appendChild(arena);
+    document.body.appendChild(stage);
+
+    // Initial suspense pause to inspect the 3 contenders
+    await new Promise(res => setTimeout(res, 1700));
+
+    // Get non-winning contenders to eliminate one by one
+    const nonWinners = candidates.filter(c => c.id !== finalWinner.id);
+
+    // Elimination 1
+    if (nonWinners.length > 0) {
+      const firstOut = nonWinners[0];
+      const elFirst = stage.querySelector(`#cand-${firstOut.id}`);
+      if (elFirst) {
+        sound.playVersusClash();
+        elFirst.classList.add('is-eliminated');
+        const badge = elFirst.querySelector('.cand-status-badge');
+        if (badge) {
+          badge.textContent = 'Descartado ❌';
+          badge.style.background = 'rgba(255, 64, 96, 0.2)';
+          badge.style.color = '#ff4d6d';
+        }
+      }
+      await new Promise(res => setTimeout(res, 1200));
+    }
+
+    // Elimination 2
+    if (nonWinners.length > 1) {
+      const secondOut = nonWinners[1];
+      const elSecond = stage.querySelector(`#cand-${secondOut.id}`);
+      if (elSecond) {
+        sound.playVersusClash();
+        elSecond.classList.add('is-eliminated');
+        const badge = elSecond.querySelector('.cand-status-badge');
+        if (badge) {
+          badge.textContent = 'Descartado ❌';
+          badge.style.background = 'rgba(255, 64, 96, 0.2)';
+          badge.style.color = '#ff4d6d';
+        }
+      }
+      await new Promise(res => setTimeout(res, 1000));
+    }
+
+    // Crown the final champion!
+    const elWinner = stage.querySelector(`#cand-${finalWinner.id}`);
+    if (elWinner) {
+      elWinner.classList.add('is-champion');
+      const badge = elWinner.querySelector('.cand-status-badge');
+      if (badge) {
+        badge.innerHTML = '👑 ¡GANADOR!';
+        badge.style.background = 'rgba(255, 209, 102, 0.3)';
+        badge.style.color = '#ffd166';
+      }
+    }
+
+    sound.playTada();
+    await new Promise(res => setTimeout(res, 1600));
+
+    // Fade out stage
+    stage.classList.add('fade-out');
+    await new Promise(res => setTimeout(res, 400));
+    stage.remove();
+
+    this.fishbowlEl.classList.remove('is-locked');
+    if (this.fishbowlEl.parentElement) {
+      this.fishbowlEl.parentElement.classList.remove('is-locked');
+    }
+  }
 }

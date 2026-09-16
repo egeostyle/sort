@@ -25,7 +25,12 @@ class App {
     this.currentPreviewData = null;
     this.selectedRaffleCategory = 'all';
     this.selectedRaffleSender = 'all';
+    this.selectedRaffleMode = 'classic';
+    this.excludeVisitedInRaffle = true;
     this.ticketsListSenderFilter = 'all';
+    this.ticketsPlatformFilter = 'all';
+    this.ticketsSearchQuery = '';
+    this.historyFilter = 'all';
     this.currentWinner = null;
     this.fishbowlController = null;
     this.confetti = null;
@@ -44,6 +49,8 @@ class App {
       fishbowl: document.getElementById('fishbowl'),
       
       // Header, Footer & Counters
+      btnHistoryToggle: document.getElementById('btn-history-toggle'),
+      historyBadgeCount: document.getElementById('history-badge-count'),
       btnCloudStatus: document.getElementById('btn-cloud-status'),
       cloudStatusDot: document.getElementById('cloud-status-dot'),
       cloudStatusText: document.getElementById('cloud-status-text'),
@@ -64,6 +71,8 @@ class App {
       raffleDialog: document.getElementById('raffle-dialog'),
       btnCloseRaffleModal: document.getElementById('btn-close-raffle-modal'),
       raffleSenderFilterGroup: document.getElementById('raffle-sender-filter-group'),
+      raffleModeGroup: document.getElementById('raffle-mode-group'),
+      chkExcludeVisited: document.getElementById('chk-exclude-visited'),
       raffleCategorySelect: document.getElementById('raffle-category-select'),
       raffleSummaryCount: document.getElementById('raffle-summary-count'),
       raffleSummaryText: document.getElementById('raffle-summary-text'),
@@ -76,6 +85,9 @@ class App {
 
       ticketsListDialog: document.getElementById('tickets-list-dialog'),
       btnCloseTicketsModal: document.getElementById('btn-close-tickets-modal'),
+      ticketsSearchInput: document.getElementById('tickets-search-input'),
+      btnClearSearch: document.getElementById('btn-clear-search'),
+      ticketsPlatformFilterGroup: document.getElementById('tickets-platform-filter-group'),
       ticketsSenderFilterGroup: document.getElementById('tickets-sender-filter-group'),
       countGeorge: document.getElementById('count-george'),
       countYenka: document.getElementById('count-yenka'),
@@ -83,6 +95,13 @@ class App {
       btnExportData: document.getElementById('btn-export-data'),
       btnImportData: document.getElementById('btn-import-data'),
       importFileInput: document.getElementById('import-file-input'),
+
+      winnersHistoryDialog: document.getElementById('winners-history-dialog'),
+      btnCloseHistoryModal: document.getElementById('btn-close-history-modal'),
+      historyTotalCount: document.getElementById('history-total-count'),
+      historyVisitedCount: document.getElementById('history-visited-count'),
+      historyFilterGroup: document.getElementById('history-filter-group'),
+      winnersListContainer: document.getElementById('winners-list-container'),
 
       mobileConnectDialog: document.getElementById('mobile-connect-dialog'),
       btnCloseMobileModal: document.getElementById('btn-close-mobile-modal'),
@@ -120,6 +139,18 @@ class App {
     this.updateSenderPillSelection();
     this.setupFirebaseStatusListener();
     this.handleIncomingShareParams();
+    this.updateHistoryBadge();
+
+    // Reactive listener for winners updates
+    store.on('WINNERS_UPDATED', () => {
+      this.updateHistoryBadge();
+      if (this.dom.winnersHistoryDialog && this.dom.winnersHistoryDialog.open) {
+        this.renderWinnersHistoryList();
+      }
+      if (this.dom.raffleDialog && this.dom.raffleDialog.open) {
+        this.refreshRaffleCategoriesCount();
+      }
+    });
 
     // Open mobile modal if hash is #celulares
     if (window.location.hash === '#celulares') {
@@ -274,6 +305,33 @@ class App {
       this.dom.categoryDialog.close();
     });
 
+    // 3.5 Winners History Modal
+    if (this.dom.btnHistoryToggle) {
+      this.dom.btnHistoryToggle.addEventListener('click', () => {
+        sound.playBubble();
+        this.openWinnersHistoryModal();
+      });
+    }
+
+    if (this.dom.btnCloseHistoryModal) {
+      this.dom.btnCloseHistoryModal.addEventListener('click', () => {
+        this.dom.winnersHistoryDialog.close();
+      });
+    }
+
+    if (this.dom.historyFilterGroup) {
+      const hPills = this.dom.historyFilterGroup.querySelectorAll('.sender-pill');
+      hPills.forEach(hp => {
+        hp.addEventListener('click', () => {
+          sound.playBubble();
+          hPills.forEach(p => p.classList.remove('active'));
+          hp.classList.add('active');
+          this.historyFilter = hp.dataset.historyFilter || 'all';
+          this.renderWinnersHistoryList();
+        });
+      });
+    }
+
     // 4. Counter pill -> Open all tickets list
     this.dom.counterPill.addEventListener('click', () => {
       sound.playBubble();
@@ -283,6 +341,38 @@ class App {
     this.dom.btnCloseTicketsModal.addEventListener('click', () => {
       this.dom.ticketsListDialog.close();
     });
+
+    if (this.dom.ticketsSearchInput) {
+      this.dom.ticketsSearchInput.addEventListener('input', (e) => {
+        this.ticketsSearchQuery = e.target.value;
+        if (this.dom.btnClearSearch) {
+          this.dom.btnClearSearch.style.display = this.ticketsSearchQuery ? 'block' : 'none';
+        }
+        this.renderTicketsList();
+      });
+    }
+
+    if (this.dom.btnClearSearch) {
+      this.dom.btnClearSearch.addEventListener('click', () => {
+        this.dom.ticketsSearchInput.value = '';
+        this.ticketsSearchQuery = '';
+        this.dom.btnClearSearch.style.display = 'none';
+        this.renderTicketsList();
+      });
+    }
+
+    if (this.dom.ticketsPlatformFilterGroup) {
+      const pPills = this.dom.ticketsPlatformFilterGroup.querySelectorAll('.sender-pill');
+      pPills.forEach(pp => {
+        pp.addEventListener('click', () => {
+          sound.playBubble();
+          pPills.forEach(p => p.classList.remove('active'));
+          pp.classList.add('active');
+          this.ticketsPlatformFilter = pp.dataset.filterPlatform || 'all';
+          this.renderTicketsList();
+        });
+      });
+    }
 
     // 5. Raffle dialog
     this.dom.btnCloseRaffleModal.addEventListener('click', () => {
@@ -307,6 +397,27 @@ class App {
           this.selectedRaffleSender = p.dataset.raffleSender;
           this.refreshRaffleCategoriesCount();
         });
+      });
+    }
+
+    if (this.dom.raffleModeGroup) {
+      const mPills = this.dom.raffleModeGroup.querySelectorAll('.sender-pill');
+      mPills.forEach(mp => {
+        mp.addEventListener('click', () => {
+          sound.playBubble();
+          mPills.forEach(p => p.classList.remove('active'));
+          mp.classList.add('active');
+          this.selectedRaffleMode = mp.dataset.raffleMode || 'classic';
+          this.updateRaffleSummary();
+        });
+      });
+    }
+
+    if (this.dom.chkExcludeVisited) {
+      this.dom.chkExcludeVisited.addEventListener('change', (e) => {
+        sound.playBubble();
+        this.excludeVisitedInRaffle = e.target.checked;
+        this.refreshRaffleCategoriesCount();
       });
     }
 
@@ -780,10 +891,11 @@ class App {
 
   // Raffle selection prompt
   openRafflePrompt() {
-    const totalCount = store.getTicketCount(null, this.selectedRaffleSender);
+    const totalCount = store.getTicketCount(null, this.selectedRaffleSender, this.excludeVisitedInRaffle);
     if (totalCount === 0) {
       const senderText = this.selectedRaffleSender === 'Yenka' ? 'de Yenka' : (this.selectedRaffleSender === 'George' ? 'de George' : '');
-      this.showToast(`No hay boletos ${senderText} en la pecera.`);
+      const visitedText = this.excludeVisitedInRaffle ? ' (sin visitar)' : '';
+      this.showToast(`No hay boletos ${senderText}${visitedText} en la pecera.`);
       return;
     }
 
@@ -793,14 +905,15 @@ class App {
 
   refreshRaffleCategoriesCount() {
     const sender = this.selectedRaffleSender || 'all';
-    const allCount = store.getTicketCount('all', sender);
+    const excludeVisited = Boolean(this.excludeVisitedInRaffle);
+    const allCount = store.getTicketCount('all', sender, excludeVisited);
     const categories = store.categories;
 
     if (this.dom.raffleCategorySelect) {
       let options = `<option value="all" ${this.selectedRaffleCategory === 'all' ? 'selected' : ''}>🌟 Todas las categorías (${allCount} boletos)</option>`;
 
       categories.forEach(cat => {
-        const catCount = store.getTicketCount(cat.id, sender);
+        const catCount = store.getTicketCount(cat.id, sender, excludeVisited);
         options += `<option value="${cat.id}" ${this.selectedRaffleCategory === cat.id ? 'selected' : ''}>● ${cat.name} (${catCount} boletos)</option>`;
       });
 
@@ -820,13 +933,15 @@ class App {
     if (!this.dom.raffleSummaryCount) return;
     const sender = this.selectedRaffleSender || 'all';
     const catId = this.selectedRaffleCategory || 'all';
-    const count = store.getTicketCount(catId, sender);
+    const excludeVisited = Boolean(this.excludeVisitedInRaffle);
+    const count = store.getTicketCount(catId, sender, excludeVisited);
     const catName = catId === 'all' ? 'Todas' : (store.getCategory(catId)?.name || 'Categoría');
     const senderLabel = sender === 'all' ? 'Ambos' : sender;
+    const modeLabel = this.selectedRaffleMode === 'tournament' ? 'Torneo Versus' : 'Clásico';
 
     this.dom.raffleSummaryCount.textContent = `${count} ${count === 1 ? 'boleto' : 'boletos'}`;
     if (this.dom.raffleSummaryText) {
-      this.dom.raffleSummaryText.innerHTML = `<i class="fa-solid fa-circle-info" style="color:var(--accent-cyan); margin-right:4px;"></i> Boletos en juego (${catName} • ${senderLabel}):`;
+      this.dom.raffleSummaryText.innerHTML = `<i class="fa-solid fa-circle-info" style="color:var(--accent-cyan); margin-right:4px;"></i> Boletos en juego (${catName} • ${senderLabel} • ${modeLabel}${excludeVisited ? ' • Sin visitar' : ''}):`;
     }
   }
 
@@ -835,7 +950,9 @@ class App {
 
     const catId = this.selectedRaffleCategory;
     const sender = this.selectedRaffleSender;
-    const poolCount = store.getTicketCount(catId, sender);
+    const excludeVisited = Boolean(this.excludeVisitedInRaffle);
+    const isTournament = this.selectedRaffleMode === 'tournament';
+    const poolCount = store.getTicketCount(catId, sender, excludeVisited);
 
     if (poolCount === 0) {
       alert('No hay boletos disponibles con los filtros seleccionados.');
@@ -850,13 +967,32 @@ class App {
 
     this.dom.raffleDialog.close();
 
-    const winner = store.drawRandomTicket(catId, sender);
+    let winner = null;
+    let candidates = [];
+
+    if (isTournament) {
+      candidates = store.drawTournamentCandidates(3, catId, sender, excludeVisited);
+      const randIdx = Math.floor(Math.random() * candidates.length);
+      winner = candidates[randIdx];
+    } else {
+      winner = store.drawRandomTicket(catId, sender, excludeVisited);
+    }
+
     this.currentWinner = winner;
     const category = store.getCategory(winner.categoryId);
 
     try {
-      // Run animation sequence (vortex, agitation, 3D launched ticket)
-      await this.fishbowlController.animateRaffle(winner, category);
+      if (isTournament && candidates.length >= 2) {
+        // Run tournament versus animation
+        await this.fishbowlController.animateTournamentRaffle(candidates, winner, category);
+      } else {
+        // Run classic animation sequence (vortex, agitation, 3D launched ticket)
+        await this.fishbowlController.animateRaffle(winner, category);
+      }
+
+      // Record in winners history
+      store.addWinner(winner);
+      this.updateHistoryBadge();
 
       // Launch celebratory confetti
       this.confetti.fire(120);
@@ -1028,7 +1164,25 @@ class App {
 
   renderTicketsList(senderFilter = this.ticketsListSenderFilter) {
     this.updateSenderCountsDisplay();
-    const tickets = store.getTickets(null, senderFilter);
+    let tickets = store.getTickets(null, senderFilter);
+
+    // Filter by platform
+    if (this.ticketsPlatformFilter && this.ticketsPlatformFilter !== 'all') {
+      tickets = tickets.filter(t => (t.platform || 'generic').toLowerCase() === this.ticketsPlatformFilter.toLowerCase());
+    }
+
+    // Filter by search query
+    const query = (this.ticketsSearchQuery || '').trim().toLowerCase();
+    if (query) {
+      tickets = tickets.filter(t => {
+        const matchTitle = (t.title || '').toLowerCase().includes(query);
+        const matchAuthor = (t.author || '').toLowerCase().includes(query);
+        const matchUrl = (t.url || '').toLowerCase().includes(query);
+        const catName = (store.getCategory(t.categoryId)?.name || '').toLowerCase();
+        const matchCategory = catName.includes(query);
+        return matchTitle || matchAuthor || matchUrl || matchCategory;
+      });
+    }
 
     tickets.forEach(t => {
       if (t.url && (t.url.endsWith('/reel/1') || t.url.endsWith('/reel/1/'))) {
@@ -1038,9 +1192,13 @@ class App {
     });
     
     if (tickets.length === 0) {
+      const isFiltered = Boolean(query) || (this.ticketsPlatformFilter !== 'all');
       this.dom.allTicketsContainer.innerHTML = `
-        <div style="text-align:center; padding: 2rem; color: var(--text-muted);">
-          No hay boletos ${senderFilter !== 'all' ? `de ${senderFilter}` : ''} guardados todavía.
+        <div style="text-align:center; padding: 2.5rem 1rem; color: var(--text-muted);">
+          <i class="fa-solid ${isFiltered ? 'fa-filter-circle-xmark' : 'fa-inbox'}" style="font-size:2rem; opacity:0.35; margin-bottom:0.75rem; display:block;"></i>
+          ${isFiltered 
+            ? 'No se encontraron boletos que coincidan con la búsqueda o plataforma seleccionada.' 
+            : `No hay boletos ${senderFilter !== 'all' ? `de ${senderFilter}` : ''} guardados todavía.`}
         </div>
       `;
       return;
@@ -1131,6 +1289,160 @@ class App {
         store.deleteTicket(id);
         this.renderTicketsList();
         this.showToast('Boleto eliminado.');
+      });
+    });
+  }
+
+  // Winners History Modal & Badge
+  updateHistoryBadge() {
+    if (!this.dom.historyBadgeCount) return;
+    const count = (store.winners || []).length;
+    this.dom.historyBadgeCount.textContent = count;
+    this.dom.historyBadgeCount.style.display = count > 0 ? 'inline-flex' : 'none';
+  }
+
+  openWinnersHistoryModal() {
+    this.renderWinnersHistoryList();
+    if (this.dom.winnersHistoryDialog) {
+      this.dom.winnersHistoryDialog.showModal();
+    }
+  }
+
+  renderWinnersHistoryList() {
+    if (!this.dom.winnersHistoryDialog) return;
+    const allWinners = store.winners || [];
+    const visitedCount = allWinners.filter(w => w.visited).length;
+
+    if (this.dom.historyTotalCount) {
+      this.dom.historyTotalCount.textContent = `${allWinners.length} ${allWinners.length === 1 ? 'sorteo realizado' : 'sorteos realizados'}`;
+    }
+    if (this.dom.historyVisitedCount) {
+      this.dom.historyVisitedCount.textContent = `${visitedCount} ${visitedCount === 1 ? 'visita completada' : 'visitas completadas'}`;
+    }
+
+    let filteredWinners = [...allWinners];
+    if (this.historyFilter === 'visited') {
+      filteredWinners = filteredWinners.filter(w => w.visited);
+    } else if (this.historyFilter === 'pending') {
+      filteredWinners = filteredWinners.filter(w => !w.visited);
+    }
+
+    if (!this.dom.winnersListContainer) return;
+
+    if (filteredWinners.length === 0) {
+      this.dom.winnersListContainer.innerHTML = `
+        <div style="text-align:center; padding: 2.5rem 1rem; color: var(--text-muted);">
+          <i class="fa-solid fa-trophy" style="font-size:2.2rem; opacity:0.3; margin-bottom:0.75rem; display:block;"></i>
+          ${allWinners.length === 0 
+            ? 'Aún no hay ganadores en el historial.<br><span style="font-size:0.78rem; opacity:0.8;">¡Realiza un sorteo en la pecera para ver los resultados aquí!</span>' 
+            : 'No hay ganadores que coincidan con este filtro.'}
+        </div>
+      `;
+      return;
+    }
+
+    this.dom.winnersListContainer.innerHTML = filteredWinners.map(w => {
+      const cat = store.getCategory(w.categoryId);
+      const plat = PLATFORMS[w.platform?.toUpperCase()] || PLATFORMS.GENERIC;
+      const isYenka = (w.sender || '').toLowerCase().includes('yenka');
+      const senderBadgeHtml = isYenka
+        ? '<span class="sender-badge sender-badge-yenka"><i class="fa-solid fa-heart" style="color:#ff4099;"></i> Yenka</span>'
+        : '<span class="sender-badge sender-badge-george"><i class="fa-solid fa-user" style="color:#00e5ff;"></i> George</span>';
+
+      const fallbackSvg = generatePlaceholderSvg(plat, w.title, w.author, w.mediaType, w.id);
+      const thumbSrc = getValidThumbnail(w.thumbnail, plat, w.title, w.author, w.mediaType, w.id);
+      const formattedDate = w.wonAt 
+        ? new Date(w.wonAt).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) 
+        : '';
+      const currentRating = Number(w.rating) || 0;
+
+      // 5 star buttons
+      const starsHtml = [1, 2, 3, 4, 5].map(starNum => {
+        const isFilled = starNum <= currentRating;
+        return `
+          <button type="button" class="star-btn ${isFilled ? 'filled' : ''}" data-winner-id="${w.id}" data-rating="${starNum}" title="Calificar con ${starNum} ${starNum === 1 ? 'estrella' : 'estrellas'}" aria-label="${starNum} estrellas">
+            <i class="fa-${isFilled ? 'solid' : 'regular'} fa-star"></i>
+          </button>
+        `;
+      }).join('');
+
+      return `
+        <div class="winner-history-row ${w.visited ? 'is-visited' : ''}" data-winner-id="${w.id}">
+          <div class="ticket-row-avatar-wrap">
+            <img src="${thumbSrc}" class="ticket-row-img" alt="" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='${fallbackSvg}';" />
+          </div>
+
+          <div class="winner-history-info">
+            <div class="winner-history-title">${escapeHtml(w.title)}</div>
+            <div class="winner-history-meta">
+              <span class="platform-pill platform-${w.platform}" style="padding:0.12rem 0.45rem; font-size:0.68rem;">
+                ${plat.iconSvg} ${plat.name}
+              </span>
+              <span style="color:${cat.color}; font-weight:600;">● ${escapeHtml(cat.name)}</span>
+              <span>•</span>
+              ${senderBadgeHtml}
+              ${formattedDate ? `<span>• <i class="fa-regular fa-clock" style="font-size:0.65rem;"></i> ${formattedDate}</span>` : ''}
+            </div>
+
+            <div class="winner-history-actions-bar">
+              <button type="button" class="btn-visited-toggle ${w.visited ? 'visited' : ''}" data-winner-id="${w.id}" title="Marcar si ya visitaron o completaron este plan">
+                <i class="fa-solid ${w.visited ? 'fa-circle-check' : 'fa-circle'}"></i>
+                <span>${w.visited ? '¡Ya fuimos!' : '¿Ya fuimos?'}</span>
+              </button>
+
+              <div class="star-rating-box">
+                <span style="font-size:0.7rem; color:var(--text-muted); margin-right:2px;">Puntaje:</span>
+                ${starsHtml}
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex; flex-direction:column; gap:0.4rem; align-items:center; justify-content:center;">
+            <a href="${w.url}" target="_blank" rel="noopener noreferrer" class="btn btn-glass" style="padding: 0.35rem 0.65rem; font-size: 0.75rem;" title="Abrir enlace original" aria-label="Abrir enlace original">
+              <i class="fa-solid fa-arrow-up-right-from-square"></i>
+            </a>
+            <button type="button" class="btn-delete-category btn-del-winner" data-winner-id="${w.id}" title="Eliminar del historial" aria-label="Eliminar ganador">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // Bind visited toggle
+    this.dom.winnersListContainer.querySelectorAll('.btn-visited-toggle').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.winnerId;
+        const newStatus = store.toggleWinnerVisited(id);
+        sound.playBubble();
+        this.showToast(newStatus ? '¡Marcado como visitado! (Excluido de sorteos si el check está activo)' : 'Desmarcado de visitados.');
+        this.renderWinnersHistoryList();
+      });
+    });
+
+    // Bind star ratings
+    this.dom.winnersListContainer.querySelectorAll('.star-btn').forEach(starBtn => {
+      starBtn.addEventListener('click', () => {
+        const id = starBtn.dataset.winnerId;
+        const rating = Number(starBtn.dataset.rating);
+        const currentWinner = (store.winners || []).find(w => w.id === id);
+        const nextRating = (currentWinner && currentWinner.rating === rating) ? 0 : rating;
+        store.setWinnerRating(id, nextRating);
+        sound.playBubble();
+        this.renderWinnersHistoryList();
+      });
+    });
+
+    // Bind delete winner
+    this.dom.winnersListContainer.querySelectorAll('.btn-del-winner').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.winnerId;
+        if (confirm('¿Eliminar este registro del historial de ganadores?')) {
+          store.deleteWinner(id);
+          sound.playBubble();
+          this.showToast('Ganador eliminado del historial.');
+          this.renderWinnersHistoryList();
+        }
       });
     });
   }

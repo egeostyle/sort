@@ -3,7 +3,7 @@
  * Enables PWA installation, offline shell caching, and Web Share Target reception.
  */
 
-const CACHE_NAME = 'sorteitos-v16';
+const CACHE_NAME = 'sorteitos-v17';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',

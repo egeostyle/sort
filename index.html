@@ -52,6 +52,12 @@
         </div>
         
         <div class="header-actions-group">
+          <!-- Winners History Button (Trofeo / Historial) -->
+          <button id="btn-history-toggle" class="header-icon-btn history-toggle-btn" type="button" aria-label="Historial de Ganadores" title="Historial de Ganadores y Planes">
+            <i class="fa-solid fa-trophy" style="color:#ffd166;"></i>
+            <span id="history-badge-count" class="history-badge-count">0</span>
+          </button>
+
           <!-- Cloud Status Button (Icon only) -->
           <button id="btn-cloud-status" class="header-icon-btn cloud-status-btn" type="button" aria-label="Estado de sincronización en la nube" title="Sincronización en la nube (Local / Firebase)">
             <i class="fa-solid fa-cloud"></i>
@@ -353,7 +359,26 @@
         </div>
       </div>
 
-      <button id="btn-confirm-raffle" class="btn btn-gold" style="width: 100%; margin-top: 0.5rem;">
+      <!-- Raffle Mode Selector -->
+      <div style="margin: 0.6rem 0 0.8rem; padding: 0.5rem; background: rgba(255,255,255,0.04); border-radius: var(--radius-sm);">
+        <div style="font-size: 0.73rem; color: var(--text-dim); margin-bottom: 0.35rem; text-align: center;">Modalidad de sorteo:</div>
+        <div id="raffle-mode-group" class="sender-pills-group" style="justify-content: center;">
+          <button type="button" class="sender-pill active" data-raffle-mode="classic">
+            <i class="fa-solid fa-dice-one"></i> Clásico (1 Ganador)
+          </button>
+          <button type="button" class="sender-pill" data-raffle-mode="tournament" style="border-color: rgba(255, 209, 102, 0.4);">
+            <i class="fa-solid fa-bolt" style="color: #ffd166;"></i> Torneo Versus (3 Finalistas)
+          </button>
+        </div>
+      </div>
+
+      <!-- Exclude Visited Toggle -->
+      <label class="raffle-exclude-visited-label" style="display: flex; align-items: center; gap: 0.6rem; padding: 0.55rem 0.8rem; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); border-radius: var(--radius-sm); margin-bottom: 0.75rem; cursor: pointer; font-size: 0.8rem; user-select: none;">
+        <input type="checkbox" id="chk-exclude-visited" style="width: 17px; height: 17px; accent-color: var(--accent-cyan); cursor: pointer;" checked />
+        <span>Sortear solo los que <strong>aún no se ha ido</strong> (excluir "Ya fuimos")</span>
+      </label>
+
+      <button id="btn-confirm-raffle" class="btn btn-gold" style="width: 100%; margin-top: 0.3rem;">
         <i class="fa-solid fa-bolt"></i> ¡Girar Pecera y Sortear!
       </button>
     </div>
@@ -441,8 +466,32 @@
         </p>
       </div>
 
+      <!-- Real-time Tickets Search Bar -->
+      <div class="tickets-search-box" style="position: relative; margin: 0.4rem 0 0.5rem;">
+        <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 0.82rem; pointer-events: none;"></i>
+        <input 
+          type="text" 
+          id="tickets-search-input" 
+          placeholder="Buscar por título, creador (@...) o enlace..." 
+          class="url-input" 
+          style="padding-left: 2.2rem; padding-right: 2rem; font-size: 0.84rem; height: 38px; border-radius: var(--radius-sm);" 
+        />
+        <button id="btn-clear-search" type="button" style="position: absolute; right: 0.5rem; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-muted); cursor: pointer; display: none; padding: 4px;" aria-label="Limpiar búsqueda">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Platform Filter Pills -->
+      <div id="tickets-platform-filter-group" class="sender-pills-group" style="margin-bottom: 0.5rem; justify-content: center; gap: 0.35rem;">
+        <button type="button" class="sender-pill active" data-filter-platform="all">Todas las redes</button>
+        <button type="button" class="sender-pill" data-filter-platform="instagram"><i class="fa-brands fa-instagram" style="color:#ff4099;"></i> Instagram</button>
+        <button type="button" class="sender-pill" data-filter-platform="tiktok"><i class="fa-brands fa-tiktok"></i> TikTok</button>
+        <button type="button" class="sender-pill" data-filter-platform="facebook"><i class="fa-brands fa-facebook" style="color:#1877f2;"></i> Facebook</button>
+        <button type="button" class="sender-pill" data-filter-platform="youtube"><i class="fa-brands fa-youtube" style="color:#ff0000;"></i> YouTube</button>
+      </div>
+
       <!-- Tickets List Sender Filter -->
-      <div id="tickets-sender-filter-group" class="sender-pills-group" style="margin: 0.5rem 0 0.8rem; justify-content: center;">
+      <div id="tickets-sender-filter-group" class="sender-pills-group" style="margin: 0.3rem 0 0.8rem; justify-content: center;">
         <button type="button" class="sender-pill active" data-filter-sender="all"><i class="fa-solid fa-layer-group"></i> Todos</button>
         <button type="button" class="sender-pill sender-george" data-filter-sender="George"><i class="fa-solid fa-user" style="color:#00e5ff;"></i> George (<span id="count-george">0</span>)</button>
         <button type="button" class="sender-pill sender-yenka" data-filter-sender="Yenka"><i class="fa-solid fa-heart" style="color:#ff4099;"></i> Yenka (<span id="count-yenka">0</span>)</button>
@@ -596,10 +645,41 @@
     </div>
   </dialog>
 
+  <!-- Modal F: Winners History ("El Rincón de los Premios") -->
+  <dialog id="winners-history-dialog">
+    <div class="modal-card" style="max-width: 560px;">
+      <div class="modal-header">
+        <h3 class="modal-title" style="display:flex; align-items:center; gap:0.5rem;">
+          <i class="fa-solid fa-trophy" style="color:#ffd166;"></i>
+          <span>Historial de Ganadores</span>
+        </h3>
+        <button id="btn-close-history-modal" class="btn-close-modal" aria-label="Cerrar modal"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <!-- Quick Summary Stats -->
+      <div class="winners-stats-bar" style="display:flex; justify-content:space-between; align-items:center; font-size:0.8rem; color:var(--text-muted); padding:0.45rem 0.75rem; background:rgba(255,255,255,0.04); border-radius:var(--radius-sm);">
+        <span id="history-total-count">0 sorteos realizados</span>
+        <span id="history-visited-count" style="color:#06d6a0; font-weight:700;">0 completados</span>
+      </div>
+
+      <!-- History Filter Pills -->
+      <div id="history-filter-group" class="sender-pills-group" style="justify-content:center; margin:0.3rem 0 0.6rem;">
+        <button type="button" class="sender-pill active" data-history-filter="all"><i class="fa-solid fa-layer-group"></i> Todos</button>
+        <button type="button" class="sender-pill" data-history-filter="visited"><i class="fa-solid fa-circle-check" style="color:#06d6a0;"></i> Ya fuimos</button>
+        <button type="button" class="sender-pill" data-history-filter="pending"><i class="fa-solid fa-hourglass-half" style="color:#ffd166;"></i> Pendientes</button>
+      </div>
+
+      <!-- Winners List Container -->
+      <div id="winners-list-container" class="category-list" style="max-height: 380px;">
+        <!-- Injected by JS -->
+      </div>
+    </div>
+  </dialog>
+
   <!-- Toast Notification Container -->
   <div id="toast-container" class="toast-container"></div>
 
   <!-- Application Scripts (ES Modules) -->
-  <script type="module" src="scripts/app.js?v=16"></script>
+  <script type="module" src="scripts/app.js?v=17"></script>
 </body>
 </html>
