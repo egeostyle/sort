@@ -510,6 +510,14 @@ dialog::backdrop {
   gap: 0.5rem;
 }
 
+.add-category-row .url-input {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+}
+
 .color-palette-picker {
   display: flex;
   gap: 0.5rem;

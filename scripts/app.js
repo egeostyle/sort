@@ -522,6 +522,28 @@ class App {
         });
       });
     }
+
+    // 14. Light-dismiss: Close modals on backdrop click
+    document.querySelectorAll('dialog').forEach(dialog => {
+      dialog.addEventListener('click', (e) => {
+        if (dialog === this.dom.winnerDialog && this.isRaffling) return;
+        const rect = dialog.querySelector('.modal-card')?.getBoundingClientRect();
+        if (rect) {
+          const isInside = (
+            e.clientX >= rect.left &&
+            e.clientX <= rect.right &&
+            e.clientY >= rect.top &&
+            e.clientY <= rect.bottom
+          );
+          if (!isInside) {
+            dialog.close();
+            if (dialog === this.dom.winnerDialog) {
+              this.isRaffling = false;
+            }
+          }
+        }
+      });
+    });
   }
 
   // Handle URL parsing, cleaning and preview display

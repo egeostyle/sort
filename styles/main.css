@@ -195,6 +195,145 @@
   border-color: rgba(14, 45, 88, 0.1);
 }
 
+/* Brand header in clear mode */
+[data-theme="clear"] .brand-name {
+  color: #0c2340;
+  text-shadow: none;
+}
+
+[data-theme="clear"] .brand-badge {
+  background: rgba(0, 139, 163, 0.12);
+  border-color: rgba(0, 139, 163, 0.28);
+  color: #008ba3;
+  font-weight: 700;
+}
+
+/* Category Manager Modal in clear mode */
+[data-theme="clear"] .category-name {
+  color: #0c2340;
+  font-weight: 600;
+}
+
+[data-theme="clear"] .category-count {
+  color: #486581;
+}
+
+[data-theme="clear"] .category-fixed-badge {
+  background: rgba(14, 45, 88, 0.06) !important;
+  color: #486581 !important;
+}
+
+[data-theme="clear"] .add-category-form {
+  background: #f0f6fc;
+  border: 1px solid rgba(14, 45, 88, 0.15);
+  box-shadow: inset 0 1px 3px rgba(12, 35, 64, 0.04);
+}
+
+[data-theme="clear"] .add-category-form .url-input {
+  background: #ffffff !important;
+  color: #0c2340 !important;
+  border: 1px solid rgba(14, 45, 88, 0.2) !important;
+  box-shadow: 0 1px 2px rgba(12, 35, 64, 0.05);
+}
+
+[data-theme="clear"] .add-category-form .url-input::placeholder {
+  color: #7b96b2 !important;
+}
+
+[data-theme="clear"] .add-category-form .url-input:focus {
+  border-color: #008ba3 !important;
+  box-shadow: 0 0 0 3px rgba(0, 139, 163, 0.15) !important;
+}
+
+[data-theme="clear"] .palette-color-choice.selected {
+  border-color: #0c2340;
+  box-shadow: 0 0 0 2px #ffffff, 0 2px 8px rgba(12, 35, 64, 0.25);
+}
+
+/* Raffle Dialog Category Choice Buttons in clear mode */
+[data-theme="clear"] .raffle-choice-btn {
+  background: rgba(14, 45, 88, 0.04);
+  border-color: rgba(14, 45, 88, 0.12);
+  color: #0c2340;
+}
+
+[data-theme="clear"] .raffle-choice-btn:hover {
+  background: rgba(0, 139, 163, 0.08);
+  border-color: #008ba3;
+}
+
+[data-theme="clear"] .raffle-choice-btn.active {
+  background: rgba(0, 139, 163, 0.14);
+  border-color: #008ba3;
+  box-shadow: 0 0 15px rgba(0, 139, 163, 0.2);
+}
+
+[data-theme="clear"] .raffle-btn-name {
+  color: #0c2340;
+}
+
+[data-theme="clear"] .raffle-btn-count {
+  color: #486581;
+}
+
+/* Modals & tabs in clear mode */
+[data-theme="clear"] .modal-header {
+  border-bottom-color: rgba(14, 45, 88, 0.1);
+}
+
+[data-theme="clear"] .btn-close-modal {
+  color: #486581;
+}
+
+[data-theme="clear"] .btn-close-modal:hover {
+  background: rgba(14, 45, 88, 0.08);
+  color: #0c2340;
+}
+
+[data-theme="clear"] .modal-tabs-header {
+  background: rgba(14, 45, 88, 0.06);
+}
+
+[data-theme="clear"] .tab-btn {
+  color: #486581;
+}
+
+[data-theme="clear"] .tab-btn:hover {
+  color: #0c2340;
+  background: rgba(14, 45, 88, 0.08);
+}
+
+[data-theme="clear"] .tab-btn.active {
+  background: #ffffff;
+  color: #0c2340;
+  box-shadow: 0 2px 6px rgba(12, 35, 64, 0.12);
+}
+
+[data-theme="clear"] .shortcut-guide-card {
+  background: rgba(240, 246, 252, 0.88);
+  border-color: rgba(14, 45, 88, 0.1);
+}
+
+[data-theme="clear"] .endpoint-display-box {
+  background: #ffffff;
+  border-color: rgba(14, 45, 88, 0.18);
+  color: #0284c7;
+}
+
+[data-theme="clear"] #firebase-status-banner {
+  background: #e0f2fe !important;
+  border: 1px solid rgba(2, 132, 199, 0.2);
+  color: #0369a1 !important;
+}
+
+[data-theme="clear"] .test-badge-row {
+  border-top-color: rgba(14, 45, 88, 0.1);
+}
+
+[data-theme="clear"] .backup-card-footer {
+  border-top-color: rgba(14, 45, 88, 0.1);
+}
+
 /* Category editor inside tickets list */
 .ticket-cat-editor {
   display: inline-flex;
