@@ -491,6 +491,19 @@
   }
 }
 
+@media (max-width: 380px) {
+  .fishbowl-stage {
+    width: min(72vw, 260px);
+    max-height: 35dvh;
+    margin: 0.2rem auto 0.75rem;
+  }
+
+  .fishbowl-cta-hint {
+    font-size: 0.72rem;
+    padding: 0.28rem 0.75rem;
+  }
+}
+
 /* ==========================================================================
    Clear / Light Theme: Crystal-Clear Fishbowl Optics & Contrast
    ========================================================================== */

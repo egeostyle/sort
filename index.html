@@ -289,14 +289,20 @@
       </div>
     </main>
 
-    <!-- 3. Bottom Section: Controls & Counter -->
+    <!-- 3. Bottom Section: Controls & Counter (Options Bar) -->
     <footer class="app-footer">
       <div class="footer-actions">
-        <button id="btn-categories" class="btn btn-glass" type="button">
+        <button id="btn-categories" class="btn btn-glass" type="button" title="Administrar y crear categorías">
           <i class="fa-solid fa-tags"></i>
           <span>Categorías</span>
         </button>
       </div>
+
+      <!-- Center Primary Raffle Action -->
+      <button id="btn-raffle-footer" class="btn btn-gold btn-raffle-footer" type="button" title="Girar pecera y sortear boletos">
+        <i class="fa-solid fa-bolt"></i>
+        <span>¡Sortear!</span>
+      </button>
 
       <!-- Ticket Counter with Click to View List -->
       <div id="counter-pill" class="counter-pill" title="Haz clic para ver todos los boletos guardados">
@@ -455,46 +461,51 @@
         <button id="btn-close-tickets-modal" class="btn-close-modal" aria-label="Cerrar modal"><i class="fa-solid fa-xmark"></i></button>
       </div>
 
-      <!-- Auto-save notification banner -->
-      <div class="storage-status-card">
-        <div class="storage-status-header">
-          <span class="status-indicator-dot"></span>
-          <span class="storage-status-title">Guardado automático activo</span>
+      <!-- Compact Auto-save Status -->
+      <div class="storage-status-compact">
+        <span class="status-indicator-dot"></span>
+        <span>Guardado automático activo en tu navegador</span>
+      </div>
+
+      <!-- Integrated Options Toolbar: Search & Dual Filter Bars -->
+      <div class="tickets-toolbar-card">
+        <!-- Real-time Tickets Search Bar -->
+        <div class="tickets-search-box">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input 
+            type="text" 
+            id="tickets-search-input" 
+            placeholder="Buscar por título, creador (@...) o enlace..." 
+            class="url-input"
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <button id="btn-clear-search" type="button" aria-label="Limpiar búsqueda">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
         </div>
-        <p class="storage-status-desc">
-          Tus boletos se guardan al instante en tu navegador al sumergirlos. No se pierden al recargar la página o volver a entrar a tu enlace de GitHub Pages.
-        </p>
-      </div>
 
-      <!-- Real-time Tickets Search Bar -->
-      <div class="tickets-search-box" style="position: relative; margin: 0.4rem 0 0.5rem;">
-        <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 0.82rem; pointer-events: none;"></i>
-        <input 
-          type="text" 
-          id="tickets-search-input" 
-          placeholder="Buscar por título, creador (@...) o enlace..." 
-          class="url-input" 
-          style="padding-left: 2.2rem; padding-right: 2rem; font-size: 0.84rem; height: 38px; border-radius: var(--radius-sm);" 
-        />
-        <button id="btn-clear-search" type="button" style="position: absolute; right: 0.5rem; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-muted); cursor: pointer; display: none; padding: 4px;" aria-label="Limpiar búsqueda">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
-      </div>
+        <!-- Filter Subbar: Platforms -->
+        <div class="tickets-filter-subbar">
+          <span class="filter-subbar-label">Red:</span>
+          <div id="tickets-platform-filter-group" class="sender-pills-group pills-scrollable">
+            <button type="button" class="sender-pill active" data-filter-platform="all"><i class="fa-solid fa-layer-group"></i> Todas</button>
+            <button type="button" class="sender-pill" data-filter-platform="instagram"><i class="fa-brands fa-instagram" style="color:#ff4099;"></i> Instagram</button>
+            <button type="button" class="sender-pill" data-filter-platform="tiktok"><i class="fa-brands fa-tiktok"></i> TikTok</button>
+            <button type="button" class="sender-pill" data-filter-platform="facebook"><i class="fa-brands fa-facebook" style="color:#1877f2;"></i> Facebook</button>
+            <button type="button" class="sender-pill" data-filter-platform="youtube"><i class="fa-brands fa-youtube" style="color:#ff0000;"></i> YouTube</button>
+          </div>
+        </div>
 
-      <!-- Platform Filter Pills -->
-      <div id="tickets-platform-filter-group" class="sender-pills-group" style="margin-bottom: 0.5rem; justify-content: center; gap: 0.35rem;">
-        <button type="button" class="sender-pill active" data-filter-platform="all">Todas las redes</button>
-        <button type="button" class="sender-pill" data-filter-platform="instagram"><i class="fa-brands fa-instagram" style="color:#ff4099;"></i> Instagram</button>
-        <button type="button" class="sender-pill" data-filter-platform="tiktok"><i class="fa-brands fa-tiktok"></i> TikTok</button>
-        <button type="button" class="sender-pill" data-filter-platform="facebook"><i class="fa-brands fa-facebook" style="color:#1877f2;"></i> Facebook</button>
-        <button type="button" class="sender-pill" data-filter-platform="youtube"><i class="fa-brands fa-youtube" style="color:#ff0000;"></i> YouTube</button>
-      </div>
-
-      <!-- Tickets List Sender Filter -->
-      <div id="tickets-sender-filter-group" class="sender-pills-group" style="margin: 0.3rem 0 0.8rem; justify-content: center;">
-        <button type="button" class="sender-pill active" data-filter-sender="all"><i class="fa-solid fa-layer-group"></i> Todos</button>
-        <button type="button" class="sender-pill sender-george" data-filter-sender="George"><i class="fa-solid fa-user" style="color:#00e5ff;"></i> George (<span id="count-george">0</span>)</button>
-        <button type="button" class="sender-pill sender-yenka" data-filter-sender="Yenka"><i class="fa-solid fa-heart" style="color:#ff4099;"></i> Yenka (<span id="count-yenka">0</span>)</button>
+        <!-- Filter Subbar: Senders -->
+        <div class="tickets-filter-subbar">
+          <span class="filter-subbar-label">Por:</span>
+          <div id="tickets-sender-filter-group" class="sender-pills-group pills-scrollable">
+            <button type="button" class="sender-pill active" data-filter-sender="all"><i class="fa-solid fa-users"></i> Todos</button>
+            <button type="button" class="sender-pill sender-george" data-filter-sender="George"><i class="fa-solid fa-user" style="color:#00e5ff;"></i> George (<span id="count-george">0</span>)</button>
+            <button type="button" class="sender-pill sender-yenka" data-filter-sender="Yenka"><i class="fa-solid fa-heart" style="color:#ff4099;"></i> Yenka (<span id="count-yenka">0</span>)</button>
+          </div>
+        </div>
       </div>
 
       <div id="all-tickets-container" class="category-list" style="max-height: 280px;">
@@ -680,6 +691,6 @@
   <div id="toast-container" class="toast-container"></div>
 
   <!-- Application Scripts (ES Modules) -->
-  <script type="module" src="scripts/app.js?v=17"></script>
+  <script type="module" src="scripts/app.js?v=18"></script>
 </body>
 </html>

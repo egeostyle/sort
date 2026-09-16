@@ -904,42 +904,48 @@ dialog::backdrop {
 }
 
 .header-actions-group {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.35rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-full);
+  padding: 4px 6px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.2);
+  flex-shrink: 0;
 }
 
 .header-icon-btn {
   position: relative;
-  width: 38px;
-  height: 38px;
-  min-width: 38px;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
   border-radius: 50%;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid transparent;
   color: var(--text-main);
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   cursor: pointer;
   transition: all var(--transition-fast);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
   padding: 0;
   outline: none;
 }
 
 .header-icon-btn:hover {
-  background: rgba(255, 255, 255, 0.16);
-  border-color: var(--accent-cyan);
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(0, 229, 255, 0.5);
   color: #fff;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(0, 229, 255, 0.25);
+  transform: translateY(-1px) scale(1.05);
+  box-shadow: 0 4px 14px rgba(0, 229, 255, 0.3);
 }
 
 .header-icon-btn:active {
-  transform: scale(0.94);
+  transform: scale(0.92);
 }
 
 .header-icon-btn:focus-visible {
@@ -1223,6 +1229,144 @@ dialog::backdrop {
 }
 
 /* ==========================================================================
+   Tickets Options Toolbar & Dual Filter Bars
+   ========================================================================== */
+.storage-status-compact {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.74rem;
+  color: var(--text-dim);
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  padding: 0.3rem 0.65rem;
+  border-radius: var(--radius-sm);
+  margin-bottom: 0.6rem;
+}
+
+.storage-status-compact .status-indicator-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 6px #10b981;
+}
+
+.tickets-toolbar-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  padding: 0.65rem 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.tickets-search-box {
+  position: relative;
+  width: 100%;
+}
+
+.tickets-search-box i.fa-magnifying-glass {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  pointer-events: none;
+}
+
+.tickets-search-box .url-input {
+  width: 100%;
+  padding-left: 2.2rem;
+  padding-right: 2rem;
+  font-size: 0.84rem;
+  height: 38px;
+  border-radius: var(--radius-sm);
+}
+
+.tickets-search-box #btn-clear-search {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: none;
+  padding: 4px;
+  font-size: 0.85rem;
+}
+
+.tickets-search-box #btn-clear-search:hover {
+  color: var(--accent-cyan);
+}
+
+.tickets-filter-subbar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.filter-subbar-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  min-width: 44px;
+  flex-shrink: 0;
+}
+
+.pills-scrollable {
+  display: flex;
+  gap: 0.35rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  padding: 2px 1px;
+  flex: 1;
+}
+
+.pills-scrollable::-webkit-scrollbar {
+  display: none;
+}
+
+/* ==========================================================================
+   Center Primary Raffle Button in Footer Options Bar
+   ========================================================================== */
+.btn-raffle-footer {
+  padding: 0.45rem 1.15rem;
+  font-size: 0.88rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  background: linear-gradient(135deg, #ffd166 0%, #ffaa00 100%);
+  color: #1a0f00;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 4px 16px rgba(255, 209, 102, 0.45);
+  animation: rafflePulseGlow 3s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+.btn-raffle-footer:hover {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 6px 22px rgba(255, 209, 102, 0.65);
+  color: #000;
+}
+
+.btn-raffle-footer:active {
+  transform: translateY(1px) scale(0.97);
+}
+
+@keyframes rafflePulseGlow {
+  0%, 100% { box-shadow: 0 4px 16px rgba(255, 209, 102, 0.4); }
+  50% { box-shadow: 0 4px 22px rgba(255, 209, 102, 0.7); }
+}
+
+/* ==========================================================================
    Mobile Responsive Adjustments for Components
    ========================================================================== */
 @media (max-width: 640px) {
@@ -1380,6 +1524,102 @@ dialog::backdrop {
 
   .backup-actions-row .btn {
     width: 100%;
+  }
+
+  /* Responsive Header Dock */
+  .header-actions-group {
+    padding: 3px 5px;
+    gap: 0.25rem;
+  }
+
+  .header-icon-btn {
+    width: 33px;
+    height: 33px;
+    min-width: 33px;
+    font-size: 0.85rem;
+  }
+
+  .cloud-status-btn .cloud-dot {
+    top: 4px;
+    right: 4px;
+    width: 6px;
+    height: 6px;
+  }
+
+  /* Responsive Tickets Toolbar */
+  .tickets-toolbar-card {
+    padding: 0.5rem 0.6rem;
+    gap: 0.4rem;
+  }
+
+  .filter-subbar-label {
+    min-width: 34px;
+    font-size: 0.66rem;
+  }
+
+  .pills-scrollable .sender-pill {
+    padding: 0.22rem 0.55rem;
+    font-size: 0.72rem;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  /* Responsive Footer Actions Bar */
+  .btn-raffle-footer {
+    padding: 0.38rem 0.85rem;
+    font-size: 0.8rem;
+  }
+
+  /* Responsive Winner History Rows */
+  .winner-history-row {
+    padding: 0.65rem 0.75rem;
+    gap: 0.55rem;
+  }
+
+  .winner-history-title {
+    font-size: 0.82rem;
+  }
+
+  .winner-history-meta {
+    font-size: 0.68rem;
+    gap: 0.3rem;
+  }
+
+  .winner-history-actions-bar {
+    gap: 0.4rem;
+    margin-top: 0.35rem;
+  }
+
+  .btn-visited-toggle {
+    padding: 0.22rem 0.5rem;
+    font-size: 0.68rem;
+  }
+
+  .star-btn {
+    font-size: 0.82rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .header-actions-group {
+    padding: 2px 3px;
+    gap: 0.15rem;
+  }
+
+  .header-icon-btn {
+    width: 29px;
+    height: 29px;
+    min-width: 29px;
+    font-size: 0.75rem;
+  }
+
+  .btn-raffle-footer {
+    padding: 0.32rem 0.65rem;
+    font-size: 0.75rem;
+  }
+
+  .btn-raffle-footer span {
+    font-size: 0.75rem;
   }
 }
 
@@ -1587,9 +1827,10 @@ dialog::backdrop {
 
 .winner-history-row {
   display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-  padding: 0.85rem;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0.85rem;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
@@ -1597,23 +1838,8 @@ dialog::backdrop {
 }
 
 .winner-history-row.is-visited {
-  border-color: rgba(6, 214, 160, 0.3);
-  background: rgba(6, 214, 160, 0.05);
-}
-
-.winner-history-top {
-  display: flex;
-  gap: 0.75rem;
-  align-items: center;
-}
-
-.winner-history-img {
-  width: 48px;
-  height: 48px;
-  border-radius: var(--radius-sm);
-  object-fit: cover;
-  flex-shrink: 0;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-color: rgba(6, 214, 160, 0.35);
+  background: rgba(6, 214, 160, 0.06);
 }
 
 .winner-history-info {
@@ -1622,7 +1848,7 @@ dialog::backdrop {
 }
 
 .winner-history-title {
-  font-size: 0.86rem;
+  font-size: 0.88rem;
   font-weight: 700;
   color: var(--text-main);
   white-space: nowrap;
@@ -1637,16 +1863,14 @@ dialog::backdrop {
   align-items: center;
   gap: 0.4rem;
   flex-wrap: wrap;
-  margin-top: 2px;
+  margin-top: 3px;
 }
 
-.winner-history-bottom {
+.winner-history-actions-bar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  padding-top: 0.5rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  gap: 0.6rem;
+  margin-top: 0.45rem;
   flex-wrap: wrap;
 }
 
@@ -1654,7 +1878,7 @@ dialog::backdrop {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  padding: 0.3rem 0.65rem;
+  padding: 0.28rem 0.65rem;
   border-radius: var(--radius-full);
   font-size: 0.72rem;
   font-weight: 700;
@@ -1665,6 +1889,12 @@ dialog::backdrop {
   transition: all var(--transition-fast);
 }
 
+.btn-visited-toggle:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.btn-visited-toggle.visited,
 .btn-visited-toggle.active {
   background: rgba(6, 214, 160, 0.18);
   border-color: #06d6a0;
@@ -1677,16 +1907,10 @@ dialog::backdrop {
   gap: 2px;
 }
 
-.star-rating-label {
-  font-size: 0.68rem;
-  color: var(--text-muted);
-  margin-right: 2px;
-}
-
 .star-btn {
   background: none;
   border: none;
-  padding: 2px 1px;
+  padding: 2px 2px;
   font-size: 0.88rem;
   cursor: pointer;
   color: rgba(255, 255, 255, 0.2);
@@ -1699,7 +1923,7 @@ dialog::backdrop {
 
 .star-btn.filled {
   color: #ffd166;
-  text-shadow: 0 0 6px rgba(255, 209, 102, 0.4);
+  text-shadow: 0 0 6px rgba(255, 209, 102, 0.45);
 }
 
 

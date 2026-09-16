@@ -58,6 +58,7 @@ class App {
       btnThemeToggle: document.getElementById('btn-theme-toggle'),
       btnCategories: document.getElementById('btn-categories'),
       counterPill: document.getElementById('counter-pill'),
+      btnRaffleFooter: document.getElementById('btn-raffle-footer'),
       btnAudioToggle: document.getElementById('btn-audio-toggle'),
       
       // Modals
@@ -337,6 +338,13 @@ class App {
       sound.playBubble();
       this.openTicketsListModal();
     });
+
+    if (this.dom.btnRaffleFooter) {
+      this.dom.btnRaffleFooter.addEventListener('click', () => {
+        sound.playBubble();
+        this.openRafflePrompt();
+      });
+    }
 
     this.dom.btnCloseTicketsModal.addEventListener('click', () => {
       this.dom.ticketsListDialog.close();
