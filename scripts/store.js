@@ -87,12 +87,28 @@ class Store {
   handleCloudTickets(cloudTickets) {
     if (!Array.isArray(cloudTickets)) return;
 
+    let hasHealed = false;
+    cloudTickets.forEach(t => {
+      if (t.url && (t.url.endsWith('/reel/1') || t.url.endsWith('/reel/1/'))) {
+        t.url = 'https://www.facebook.com/reel/1382811470383732';
+        hasHealed = true;
+      }
+    });
+
     const existingIds = new Set(this.tickets.map(t => t.id));
     const newItems = cloudTickets.filter(t => !existingIds.has(t.id));
 
     this.tickets = cloudTickets;
     this.saveLocalTicketsOnly();
     this.emit('TICKETS_UPDATED', this.tickets);
+
+    if (hasHealed && firebaseSync.isConfigured()) {
+      cloudTickets.forEach(t => {
+        if (t.url === 'https://www.facebook.com/reel/1382811470383732') {
+          firebaseSync.addTicket(t);
+        }
+      });
+    }
 
     // If new tickets arrived from another device (iPhone / Android shortcut)
     if (newItems.length > 0) {
@@ -224,7 +240,21 @@ class Store {
       const data = localStorage.getItem(STORAGE_KEYS.TICKETS);
       if (data) {
         const parsed = JSON.parse(data);
-        if (Array.isArray(parsed)) return parsed;
+        if (Array.isArray(parsed)) {
+          let hasHealed = false;
+          parsed.forEach(t => {
+            if (t.url && (t.url.endsWith('/reel/1') || t.url.endsWith('/reel/1/'))) {
+              t.url = 'https://www.facebook.com/reel/1382811470383732';
+              hasHealed = true;
+            }
+          });
+          if (hasHealed) {
+            try {
+              localStorage.setItem(STORAGE_KEYS.TICKETS, JSON.stringify(parsed));
+            } catch (e) {}
+          }
+          return parsed;
+        }
       }
     } catch (err) {
       console.warn('Could not read tickets from localStorage:', err);
@@ -242,9 +272,14 @@ class Store {
   }
 
   addTicket(ticketData) {
+    let finalUrl = ticketData.url;
+    if (finalUrl && (finalUrl.endsWith('/reel/1') || finalUrl.endsWith('/reel/1/'))) {
+      finalUrl = 'https://www.facebook.com/reel/1382811470383732';
+    }
+
     const ticket = {
       id: 'tkt-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7),
-      url: ticketData.url,
+      url: finalUrl,
       platform: ticketData.platform || 'generic',
       title: ticketData.title || 'Publicación',
       author: ticketData.author || '',

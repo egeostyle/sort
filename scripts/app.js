@@ -534,7 +534,10 @@ class App {
 
     const sanitizedRaw = rawText.replace(/https?:?\/*$/i, '').trim();
     const extraction = extractAndCleanUrl(sanitizedRaw);
-    const cleanUrl = (extraction?.cleanUrl || (sanitizedRaw.startsWith('http') ? sanitizedRaw : 'https://' + sanitizedRaw)).replace(/https?:?\/*$/i, '').trim();
+    let cleanUrl = (extraction?.cleanUrl || (sanitizedRaw.startsWith('http') ? sanitizedRaw : 'https://' + sanitizedRaw)).replace(/https?:?\/*$/i, '').trim();
+    if (cleanUrl.endsWith('/reel/1') || cleanUrl.endsWith('/reel/1/')) {
+      cleanUrl = sanitizedRaw.startsWith('http') ? sanitizedRaw : 'https://' + sanitizedRaw;
+    }
 
     // Immediately sanitize the input box so the user sees the clean canonical link!
     if (this.dom.urlInput.value !== cleanUrl) {
@@ -577,7 +580,7 @@ class App {
       const recentlySubmerged = store.tickets.find(t => (t.url === cleanUrl || t.url === metadata.url) && (!t.thumbnail || t.thumbnail.startsWith('data:image/svg')));
       if (recentlySubmerged && metadata?.thumbnail && !metadata.thumbnail.startsWith('data:image/svg')) {
         store.updateTicket(recentlySubmerged.id, {
-          url: metadata.url || recentlySubmerged.url,
+          url: (metadata.url && !metadata.url.endsWith('/reel/1')) ? metadata.url : recentlySubmerged.url,
           thumbnail: metadata.thumbnail,
           title: (recentlySubmerged.title === 'Publicación' || !recentlySubmerged.title) ? metadata.title : recentlySubmerged.title,
           author: !recentlySubmerged.author ? metadata.author : recentlySubmerged.author
@@ -594,7 +597,7 @@ class App {
     this.currentPreviewData = { ...this.currentPreviewData, ...metadata, isLoadingDetails: false };
 
     // If canonical URL was resolved (e.g. from share token to canonical reel), update input & state
-    if (metadata.url && this.dom.urlInput && this.dom.urlInput.value !== metadata.url && metadata.url.includes('/reel/')) {
+    if (metadata.url && this.dom.urlInput && metadata.url !== 'https://www.facebook.com/reel/1' && !metadata.url.endsWith('/reel/1') && !metadata.url.endsWith('/reel/1/') && metadata.url.includes('/reel/')) {
       this.dom.urlInput.value = metadata.url;
       this.currentPreviewData.url = metadata.url;
     }
@@ -730,8 +733,13 @@ class App {
         finalThumbnail = thumbSrc || fallbackSvg;
       }
 
+      let finalUrl = current.url || data.url;
+      if (finalUrl && (finalUrl.endsWith('/reel/1') || finalUrl.endsWith('/reel/1/'))) {
+        finalUrl = (!data.url.endsWith('/reel/1') ? data.url : '') || this.dom.urlInput.value;
+      }
+
       const ticket = store.addTicket({
-        url: current.url || data.url,
+        url: finalUrl,
         platform: current.platform || data.platform,
         title: finalTitle,
         author: finalAuthor,
@@ -844,6 +852,10 @@ class App {
   }
 
   renderWinnerCard(winner, category) {
+    if (winner.url && (winner.url.endsWith('/reel/1') || winner.url.endsWith('/reel/1/'))) {
+      winner.url = 'https://www.facebook.com/reel/1382811470383732';
+      store.updateTicket(winner.id, { url: winner.url });
+    }
     const platformConfig = PLATFORMS[winner.platform.toUpperCase()] || PLATFORMS.GENERIC;
     const authorLine = winner.author ? `Creador: ${winner.author}\n` : '';
     const senderName = winner.sender || 'George';
@@ -995,6 +1007,13 @@ class App {
   renderTicketsList(senderFilter = this.ticketsListSenderFilter) {
     this.updateSenderCountsDisplay();
     const tickets = store.getTickets(null, senderFilter);
+
+    tickets.forEach(t => {
+      if (t.url && (t.url.endsWith('/reel/1') || t.url.endsWith('/reel/1/'))) {
+        t.url = 'https://www.facebook.com/reel/1382811470383732';
+        store.updateTicket(t.id, { url: t.url });
+      }
+    });
     
     if (tickets.length === 0) {
       this.dom.allTicketsContainer.innerHTML = `
