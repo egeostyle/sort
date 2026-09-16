@@ -282,6 +282,19 @@ class Store {
     return false;
   }
 
+  updateTicket(ticketId, updates) {
+    const ticket = this.tickets.find(t => t.id === ticketId);
+    if (!ticket) return false;
+    Object.assign(ticket, updates);
+    this.saveTickets();
+    this.emit('TICKET_UPDATED', ticket);
+
+    if (firebaseSync.isConfigured()) {
+      firebaseSync.addTicket(ticket);
+    }
+    return true;
+  }
+
   updateTicketCategory(ticketId, newCategoryId) {
     const ticket = this.tickets.find(t => t.id === ticketId);
     if (!ticket) return false;

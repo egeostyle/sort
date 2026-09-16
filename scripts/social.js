@@ -1044,5 +1044,11 @@ export function getValidThumbnail(thumb, platform, title, author, mediaType, id)
   if (thumb.includes('rsrc.php') || thumb.includes('static.xx.fbcdn.net') || thumb.includes('static.cdninstagram.com')) {
     return fallbackSvg;
   }
+
+  // If it's a direct Meta CDN image without weserv proxy, wrap it with weserv for CORS & hotlink protection
+  if ((thumb.includes('fbcdn.net') || thumb.includes('cdninstagram.com')) && !thumb.includes('weserv.nl')) {
+    return `https://images.weserv.nl/?url=${encodeURIComponent(thumb)}`;
+  }
+
   return thumb;
 }

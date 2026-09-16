@@ -573,6 +573,15 @@ class App {
       if (this.currentPreviewData && this.currentPreviewData.url === cleanUrl) {
         this.updatePreviewCardDetails(metadata);
       }
+      // If the user already submerged this ticket while metadata was in-flight, update it in the store!
+      const recentlySubmerged = store.tickets.find(t => t.url === cleanUrl && (!t.thumbnail || t.thumbnail.startsWith('data:image/svg')));
+      if (recentlySubmerged && metadata?.thumbnail && !metadata.thumbnail.startsWith('data:image/svg')) {
+        store.updateTicket(recentlySubmerged.id, {
+          thumbnail: metadata.thumbnail,
+          title: (recentlySubmerged.title === 'Publicación' || !recentlySubmerged.title) ? metadata.title : recentlySubmerged.title,
+          author: !recentlySubmerged.author ? metadata.author : recentlySubmerged.author
+        });
+      }
     } catch (err) {
       const loadingIndicator = document.getElementById('preview-loading-indicator');
       if (loadingIndicator) loadingIndicator.remove();
@@ -665,13 +674,17 @@ class App {
     if (btnChangeThumb) {
       btnChangeThumb.addEventListener('click', (e) => {
         e.stopPropagation();
-        const initialVal = thumbSrc.startsWith('data:image/svg') ? '' : thumbSrc;
+        const currentThumb = this.currentPreviewData?.thumbnail || thumbSrc;
+        const initialVal = currentThumb.startsWith('data:image/svg') ? '' : currentThumb;
         const newUrl = prompt('Pega el enlace de una foto o captura de este boleto (o deja vacío para cancelar):', initialVal);
         if (newUrl && newUrl.trim()) {
           thumbSrc = newUrl.trim();
           const imgElem = document.getElementById('preview-img-elem');
           if (imgElem) imgElem.src = thumbSrc;
           data.thumbnail = thumbSrc;
+          if (this.currentPreviewData) {
+            this.currentPreviewData.thumbnail = thumbSrc;
+          }
         }
       });
     }
@@ -695,14 +708,28 @@ class App {
 
     btnAdd.addEventListener('click', () => {
       const selectedCatId = categorySelect.value;
-      const finalTitle = (titleInput?.value || '').trim() || data.title;
+      const current = this.currentPreviewData || data;
+      const finalTitle = (titleInput?.value || '').trim() || current.title || data.title;
+      const finalAuthor = current.author || data.author;
+
+      const previewImg = document.getElementById('preview-img-elem');
+      let finalThumbnail = current.thumbnail;
+      if (!finalThumbnail || finalThumbnail.startsWith('data:image/svg')) {
+        if (previewImg && previewImg.src && !previewImg.src.startsWith('data:image/svg')) {
+          finalThumbnail = previewImg.src;
+        }
+      }
+      if (!finalThumbnail) {
+        finalThumbnail = thumbSrc || fallbackSvg;
+      }
+
       const ticket = store.addTicket({
-        url: data.url,
-        platform: data.platform,
+        url: current.url || data.url,
+        platform: current.platform || data.platform,
         title: finalTitle,
-        author: data.author,
-        thumbnail: thumbSrc,
-        mediaType: data.mediaType,
+        author: finalAuthor,
+        thumbnail: finalThumbnail,
+        mediaType: current.mediaType || data.mediaType,
         categoryId: selectedCatId,
         sender: store.activeSender
       });
@@ -863,6 +890,21 @@ class App {
         </div>
       </div>
     `;
+
+    // Auto-heal winner if it was saved with fallback placeholder
+    if (winner.url && (!winner.thumbnail || winner.thumbnail.startsWith('data:image/svg'))) {
+      resolveSocialMetadata(winner.url).then(meta => {
+        if (meta && meta.thumbnail && !meta.thumbnail.startsWith('data:image/svg')) {
+          store.updateTicket(winner.id, {
+            thumbnail: meta.thumbnail,
+            author: winner.author || meta.author,
+            title: (winner.title === 'Publicación' || !winner.title) ? meta.title : winner.title
+          });
+          const img = this.dom.winnerCardContainer?.querySelector('.winner-img');
+          if (img) img.src = meta.thumbnail;
+        }
+      }).catch(() => {});
+    }
   }
 
   // Category management modal
@@ -969,7 +1011,7 @@ class App {
 
       const avatarHtml = `
         <div class="ticket-row-avatar-wrap">
-          <img src="${thumbSrc}" class="ticket-row-img" alt="" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='${fallbackSvg}';" />
+          <img src="${thumbSrc}" class="ticket-row-img" data-ticket-id="${t.id}" alt="" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='${fallbackSvg}';" />
         </div>
       `;
 
@@ -1004,6 +1046,23 @@ class App {
         </div>
       `;
     }).join('');
+
+    // Auto-heal existing tickets that only have SVG fallback or missing thumbnail
+    tickets.forEach(t => {
+      if (t.url && (!t.thumbnail || t.thumbnail.startsWith('data:image/svg'))) {
+        resolveSocialMetadata(t.url).then(meta => {
+          if (meta && meta.thumbnail && !meta.thumbnail.startsWith('data:image/svg')) {
+            store.updateTicket(t.id, {
+              thumbnail: meta.thumbnail,
+              author: t.author || meta.author,
+              title: (t.title === 'Publicación' || !t.title) ? meta.title : t.title
+            });
+            const img = this.dom.allTicketsContainer?.querySelector(`img[data-ticket-id="${t.id}"]`);
+            if (img) img.src = meta.thumbnail;
+          }
+        }).catch(() => {});
+      }
+    });
 
     // Bind category changer dropdowns
     this.dom.allTicketsContainer.querySelectorAll('.ticket-cat-select').forEach(select => {
