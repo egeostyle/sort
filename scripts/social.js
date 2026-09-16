@@ -805,7 +805,7 @@ function isGarbageThumbnail(url) {
   return false;
 }
 
-const METADATA_CACHE_KEY = 'sorteitos_metadata_cache_v1';
+const METADATA_CACHE_KEY = 'sorteitos_metadata_cache_v2';
 
 function getCachedMetadata(url) {
   try {
@@ -815,6 +815,10 @@ function getCachedMetadata(url) {
     const item = cache[url];
     // Cache is valid for 7 days
     if (item && item.timestamp && (Date.now() - item.timestamp < 7 * 24 * 3600 * 1000)) {
+      // Do not use cache if it was an SVG fallback or has a generic title
+      if (!item.data || !item.data.thumbnail || item.data.thumbnail.startsWith('data:image/svg') || isGarbageTitle(item.data.title)) {
+        return null;
+      }
       return item.data;
     }
   } catch (e) {}
@@ -823,6 +827,10 @@ function getCachedMetadata(url) {
 
 function setCachedMetadata(url, data) {
   try {
+    // Only cache if we have a real non-SVG thumbnail and valid title
+    if (!data || !data.thumbnail || data.thumbnail.startsWith('data:image/svg') || isGarbageTitle(data.title)) {
+      return;
+    }
     const raw = localStorage.getItem(METADATA_CACHE_KEY);
     const cache = raw ? JSON.parse(raw) : {};
     cache[url] = { timestamp: Date.now(), data };

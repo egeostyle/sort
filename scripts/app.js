@@ -570,13 +570,14 @@ class App {
     // 2. Fetch rich metadata in background and update seamlessly
     try {
       const metadata = await resolveSocialMetadata(cleanUrl);
-      if (this.currentPreviewData && this.currentPreviewData.url === cleanUrl) {
+      if (this.currentPreviewData && (this.currentPreviewData.url === cleanUrl || this.currentPreviewData.url === metadata.url)) {
         this.updatePreviewCardDetails(metadata);
       }
       // If the user already submerged this ticket while metadata was in-flight, update it in the store!
-      const recentlySubmerged = store.tickets.find(t => t.url === cleanUrl && (!t.thumbnail || t.thumbnail.startsWith('data:image/svg')));
+      const recentlySubmerged = store.tickets.find(t => (t.url === cleanUrl || t.url === metadata.url) && (!t.thumbnail || t.thumbnail.startsWith('data:image/svg')));
       if (recentlySubmerged && metadata?.thumbnail && !metadata.thumbnail.startsWith('data:image/svg')) {
         store.updateTicket(recentlySubmerged.id, {
+          url: metadata.url || recentlySubmerged.url,
           thumbnail: metadata.thumbnail,
           title: (recentlySubmerged.title === 'Publicación' || !recentlySubmerged.title) ? metadata.title : recentlySubmerged.title,
           author: !recentlySubmerged.author ? metadata.author : recentlySubmerged.author
@@ -591,6 +592,12 @@ class App {
   updatePreviewCardDetails(metadata) {
     if (!this.currentPreviewData) return;
     this.currentPreviewData = { ...this.currentPreviewData, ...metadata, isLoadingDetails: false };
+
+    // If canonical URL was resolved (e.g. from share token to canonical reel), update input & state
+    if (metadata.url && this.dom.urlInput && this.dom.urlInput.value !== metadata.url && metadata.url.includes('/reel/')) {
+      this.dom.urlInput.value = metadata.url;
+      this.currentPreviewData.url = metadata.url;
+    }
 
     const imgElem = document.getElementById('preview-img-elem');
     if (imgElem && metadata.thumbnail) {
