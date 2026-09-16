@@ -100,20 +100,12 @@ export function extractAndCleanUrl(rawInput) {
         };
       }
 
-      // /share/r/ID (reels) or /share/v/ID or /share/p/ID
+      // /share/r/ID (reels), /share/v/ID (video) or /share/p/ID (posts)
       const shareMatch = pathname.match(/\/share\/([rvp])\/([^/?#]+)/i);
       if (shareMatch) {
-        const type = shareMatch[1].toLowerCase();
         const id = shareMatch[2];
-        if (type === 'r') {
-          return {
-            cleanUrl: `https://www.facebook.com/reel/${id}`,
-            rawUrl: urlStr,
-            platform: 'facebook'
-          };
-        }
         return {
-          cleanUrl: `https://www.facebook.com/share/${type}/${id}/`,
+          cleanUrl: `https://www.facebook.com/reel/${id}`,
           rawUrl: urlStr,
           platform: 'facebook'
         };
@@ -888,11 +880,14 @@ export async function resolveSocialMetadata(rawUrl) {
       if (res.ok) {
         const json = await res.json();
         if (json && json.status === 'success') {
+          let hasUpdated = false;
           if (json.title && !isGarbageTitle(json.title, parsedId)) {
             result.title = decodeHtmlEntities(json.title);
+            hasUpdated = true;
           }
           if (json.author && !isGarbageTitle(json.author, parsedId)) {
             result.author = decodeHtmlEntities(json.author);
+            hasUpdated = true;
           }
           if (json.image && !isGarbageThumbnail(json.image)) {
             let thumb = json.image;
@@ -901,6 +896,9 @@ export async function resolveSocialMetadata(rawUrl) {
             } else {
               result.thumbnail = thumb;
             }
+            hasUpdated = true;
+          }
+          if (hasUpdated) {
             setCachedMetadata(cleanUrl, result);
             return result;
           }
