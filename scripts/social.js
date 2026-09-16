@@ -771,6 +771,12 @@ function isGarbageTitle(title, parsedId) {
   if (t.length <= 2) return true;
   if (parsedId && (t === parsedId.toLowerCase() || t === ('#' + parsedId).toLowerCase())) return true;
   const badPhrases = [
+    'publicación',
+    'publicacion',
+    'publicación de facebook',
+    'publicacion de facebook',
+    'reel de facebook',
+    'video de facebook',
     'log in or sign up to view',
     'log in to view',
     'iniciar sesión',
@@ -933,6 +939,12 @@ export async function resolveSocialMetadata(rawUrl) {
         const json = await res.json();
         if (json && json.status === 'success') {
           let hasUpdated = false;
+          if (json.url && json.url.includes('/reel/')) {
+            const canonicalMatch = json.url.match(/\/reels?\/(\d+)/i);
+            if (canonicalMatch) {
+              result.url = `https://www.facebook.com/reel/${canonicalMatch[1]}`;
+            }
+          }
           if (json.title && !isGarbageTitle(json.title, parsedId)) {
             result.title = decodeHtmlEntities(json.title);
             hasUpdated = true;
@@ -941,6 +953,7 @@ export async function resolveSocialMetadata(rawUrl) {
             result.author = decodeHtmlEntities(json.author);
             hasUpdated = true;
           }
+          let hasImage = false;
           if (json.image && !isGarbageThumbnail(json.image)) {
             let thumb = json.image;
             if (thumb.includes('cdninstagram.com') || thumb.includes('fbcdn.net')) {
@@ -948,9 +961,12 @@ export async function resolveSocialMetadata(rawUrl) {
             } else {
               result.thumbnail = thumb;
             }
+            hasImage = true;
             hasUpdated = true;
           }
-          if (hasUpdated) {
+          // Only finalize and return if we obtained a real image!
+          // If image is missing, fall through to Microlink fallback!
+          if (hasUpdated && hasImage) {
             setCachedMetadata(cleanUrl, result);
             return result;
           }
