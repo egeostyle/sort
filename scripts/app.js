@@ -164,6 +164,26 @@ class App {
       const first = items[0];
       const senderText = first.sender ? `de ${first.sender}` : '';
       this.showToast(`¡Nuevo boleto sumergido en vivo ${senderText}!`);
+
+      // Auto-enrich any remote tickets that arrived without full metadata (e.g. from iOS/Android shortcuts)
+      items.forEach(async (item) => {
+        if (item.url && (!item.thumbnail || item.platform === 'generic')) {
+          try {
+            const meta = await socialParser.fetchMetadata(item.url);
+            if (meta && (meta.title !== item.title || meta.thumbnail !== item.thumbnail)) {
+              store.updateTicket(item.id, {
+                title: meta.title || item.title,
+                author: meta.author || item.author,
+                thumbnail: meta.thumbnail || item.thumbnail,
+                platform: meta.platform?.id || item.platform,
+                mediaType: meta.mediaType || item.mediaType
+              });
+            }
+          } catch (e) {
+            console.warn('Could not auto-enrich shortcut ticket:', e);
+          }
+        }
+      });
     });
 
     // Reactive listener for ticket updates (categories modified, deleted, or added)

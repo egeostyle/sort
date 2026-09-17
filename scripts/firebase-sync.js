@@ -141,13 +141,17 @@ export class FirebaseSync {
 
     try {
       const ticketsCol = collection(this.db, 'tickets');
-      // Listen to recent 200 tickets
-      const q = query(ticketsCol, orderBy('createdAt', 'desc'), limit(200));
+      // Listen to recent 200 tickets (query without strict orderBy so documents created via REST API without createdAt are not omitted by Firestore)
+      const q = query(ticketsCol, limit(200));
 
       this.unsubscribeTickets = onSnapshot(q, (snapshot) => {
         const cloudTickets = [];
         snapshot.forEach((docSnap) => {
           const data = docSnap.data();
+          // Fallback to Firestore document createTime or now if createdAt was not supplied
+          const resolvedCreatedAt = data.createdAt || 
+            (docSnap._document?.createTime?.timestamp ? new Date(docSnap._document.createTime.timestamp.seconds * 1000).toISOString() : new Date().toISOString());
+
           cloudTickets.push({
             id: docSnap.id,
             url: data.url || '',
@@ -158,8 +162,15 @@ export class FirebaseSync {
             mediaType: data.mediaType || 'video',
             categoryId: data.categoryId || 'cat-general',
             sender: data.sender || 'General',
-            createdAt: data.createdAt || new Date().toISOString()
+            createdAt: resolvedCreatedAt
           });
+        });
+
+        // Sort descending by createdAt in memory
+        cloudTickets.sort((a, b) => {
+          const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return timeB - timeA;
         });
 
         if (this.onTicketsSync) {
