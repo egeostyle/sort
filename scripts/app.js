@@ -1531,8 +1531,19 @@ class App {
     const iphoneDetails = shortcutsGuide.getIosShortcutDetails('Yenka');
     if (this.dom.iphoneStepsContainer) {
       this.dom.iphoneStepsContainer.innerHTML = `
+        <div style="margin-bottom:0.85rem; padding:0.85rem; background:linear-gradient(135deg, rgba(255, 64, 153, 0.15), rgba(168, 85, 247, 0.15)); border:1px solid rgba(255, 64, 153, 0.4); border-radius:var(--radius-sm); text-align:center;">
+          <div style="font-weight:700; color:#ff4099; font-size:0.88rem; margin-bottom:0.35rem; display:flex; align-items:center; justify-content:center; gap:0.4rem;">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> ¡Atajo Ya Creado y Listo!
+          </div>
+          <p style="font-size:0.75rem; color:var(--text-main); margin-bottom:0.65rem; line-height:1.4;">
+            No necesitas crearlo a mano. Puedes instalarlo en 1 toque directo en el iPhone o enviarlo por AirDrop desde la Mac:
+          </p>
+          <a href="assets/Pecera_Yenka.shortcut" class="btn btn-primary" style="display:inline-flex; align-items:center; gap:0.5rem; background:linear-gradient(135deg, #ff2a85, #a855f7); text-decoration:none; padding:0.5rem 1.1rem; font-size:0.82rem; font-weight:700;" download>
+            <i class="fa-solid fa-download"></i> Instalar Atajo "Pecera_Yenka"
+          </a>
+        </div>
         <div style="margin-bottom:0.75rem;">
-          <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:0.25rem;">Endpoint REST (para Atajo de iOS):</div>
+          <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:0.25rem;">Endpoint REST configurado:</div>
           <div class="endpoint-display-box">${iphoneDetails.endpoint}</div>
         </div>
         <div>
